@@ -14,7 +14,7 @@ import MainNavigator from './MainNavigator';
  */
 export default function RootNavigator() {
   // TODO: Replace with real auth state
-  const isSignedIn = false;
+  const isSignedIn = true;
   const Stack = createNativeStackNavigator();
   return (
     <NavigationContainer>

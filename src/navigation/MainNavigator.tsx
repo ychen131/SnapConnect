@@ -1,19 +1,25 @@
 /**
  * @file MainNavigator.tsx
- * @description Placeholder main app navigator for signed-in users.
+ * @description Main app navigator with bottom tabs for Camera, Chat, Stories, Profile.
  */
 import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import HomeScreen from '../screens/Main/HomeScreen';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import CameraScreen from '../screens/Main/CameraScreen';
+import ChatScreen from '../screens/Main/ChatScreen';
+import StoriesScreen from '../screens/Main/StoriesScreen';
+import ProfileScreen from '../screens/Main/ProfileScreen';
 
 /**
- * MainNavigator for signed-in users.
+ * MainNavigator for signed-in users with bottom tabs.
  */
 export default function MainNavigator() {
-  const Stack = createNativeStackNavigator();
+  const Tab = createBottomTabNavigator();
   return (
-    <Stack.Navigator>
-      <Stack.Screen name="Home" component={HomeScreen} />
-    </Stack.Navigator>
+    <Tab.Navigator>
+      <Tab.Screen name="Camera" component={CameraScreen} />
+      <Tab.Screen name="Chat" component={ChatScreen} />
+      <Tab.Screen name="Stories" component={StoriesScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
   );
 }
