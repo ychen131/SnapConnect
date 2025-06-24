@@ -1,11 +1,10 @@
 /**
  * @file useAuth.ts
- * @description Custom hook for authentication state management.
+ * @description Custom hook for authentication state management (Supabase only).
  */
 
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-
 import { supabase } from '../api/supabase';
 
 export function useAuth() {
@@ -14,14 +13,12 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {

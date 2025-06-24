@@ -4,18 +4,18 @@
  */
 
 export type RootStackParamList = {
-  // Auth screens
+  // Auth s
   Login: undefined;
   Signup: undefined;
 
-  // Main app screens
+  // Main app s
   Main: undefined;
   Camera: undefined;
   Chat: undefined;
   Stories: undefined;
   Profile: undefined;
 
-  // Modal screens
+  // Modal s
   SendTo: {
     mediaUrl: string;
     mediaType: 'photo' | 'video';

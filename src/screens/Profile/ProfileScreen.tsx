@@ -1,6 +1,6 @@
 /**
  * @file ProfileScreen.tsx
- * @description Profile screen for user settings and information.
+ * @description Profile screen placeholder.
  */
 
 import React from 'react';

@@ -41,7 +41,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     debugMode: process.env.EXPO_PUBLIC_DEBUG_MODE === 'true',
   },
   plugins: [
-    'expo-router',
     [
       'expo-camera',
       {

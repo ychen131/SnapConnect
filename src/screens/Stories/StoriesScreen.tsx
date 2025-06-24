@@ -1,6 +1,6 @@
 /**
  * @file StoriesScreen.tsx
- * @description Stories screen for viewing friend stories.
+ * @description Stories screen placeholder.
  */
 
 import React from 'react';

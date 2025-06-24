@@ -1,6 +1,6 @@
 /**
  * @file ChatScreen.tsx
- * @description Chat screen for viewing and managing conversations.
+ * @description Chat screen placeholder.
  */
 
 import React from 'react';
