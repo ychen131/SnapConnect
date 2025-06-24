@@ -3,10 +3,19 @@
  * @description Screen for selecting friends to send snaps to. Displays friends list with search functionality.
  */
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, TextInput, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  TextInput,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { getFriendsList, searchUsers, Friend } from '../../services/friendService';
+import { uploadMediaToStorage, sendSnapToFriends } from '../../services/snapService';
 
 interface SendToScreenProps {
   navigation: any;
@@ -32,6 +41,8 @@ export default function SendToScreen({ navigation, route }: SendToScreenProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFriends, setSelectedFriends] = useState<Set<string>>(new Set());
   const [isSearching, setIsSearching] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Load friends list on component mount
   useEffect(() => {
@@ -97,20 +108,33 @@ export default function SendToScreen({ navigation, route }: SendToScreenProps) {
   /**
    * Handles sending the snap to selected friends
    */
-  function handleSend() {
-    if (selectedFriends.size === 0) {
-      // Show error or alert
+  async function handleSend() {
+    if (selectedFriends.size === 0 || !user?.id) {
       return;
     }
-
-    console.log('📤 Sending snap to friends:', Array.from(selectedFriends));
-    console.log('📁 Content URI:', contentUri);
-    console.log('📹 Content Type:', contentType);
-    console.log('⏱️ Photo Timer:', photoTimer);
-
-    // TODO: Implement actual snap sending logic
-    // For now, just navigate back to camera
-    navigation.navigate('Camera');
+    setIsSending(true);
+    setSuccessMessage('');
+    try {
+      // 1. Upload media to Supabase Storage
+      const mediaUrl = await uploadMediaToStorage(contentUri, user.id);
+      // 2. Insert snap records for each friend
+      await sendSnapToFriends({
+        senderId: user.id,
+        recipientIds: Array.from(selectedFriends),
+        mediaUrl,
+        mediaType: contentType,
+        timer: contentType === 'photo' ? photoTimer : undefined,
+      });
+      setSuccessMessage('Snap sent!');
+      setTimeout(() => {
+        setIsSending(false);
+        setSuccessMessage('');
+        navigation.navigate('CameraMain');
+      }, 1200);
+    } catch (error) {
+      setIsSending(false);
+      Alert.alert('Error', 'Failed to send snap. Please try again.');
+    }
   }
 
   /**
@@ -166,6 +190,19 @@ export default function SendToScreen({ navigation, route }: SendToScreenProps) {
       <View className="flex-1 items-center justify-center bg-white">
         <ActivityIndicator size="large" color="#3B82F6" />
         <Text className="mt-4 text-gray-600">Loading friends...</Text>
+      </View>
+    );
+  }
+
+  // Show sending spinner
+  if (isSending) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text className="mt-4 text-gray-600">Sending snap...</Text>
+        {successMessage ? (
+          <Text className="mt-4 text-lg font-semibold text-green-600">{successMessage}</Text>
+        ) : null}
       </View>
     );
   }
