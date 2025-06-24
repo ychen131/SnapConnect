@@ -14,6 +14,7 @@ import {
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { getConversations, Conversation } from '../../services/chatService';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
  * Displays a list of chat conversations for the current user
@@ -163,9 +164,11 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
   return (
     <View className="flex-1 bg-gray-50">
       {/* Header */}
-      <View className="border-b border-gray-200 bg-white px-4 py-3">
-        <Text className="text-xl font-bold text-gray-900">Chats</Text>
-      </View>
+      <SafeAreaView edges={['top']} className="bg-white">
+        <View className="border-b border-gray-200 px-4 py-3">
+          <Text className="text-xl font-bold text-gray-900">Chats</Text>
+        </View>
+      </SafeAreaView>
 
       {/* Conversations List */}
       <FlatList
