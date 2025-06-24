@@ -6,14 +6,17 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { RootNavigator } from './src/navigation/RootNavigator';
-import { View } from 'react-native';
-import 'nativewind/types';
+import { View, Text } from 'react-native';
+import { StyleSheet } from 'nativewind';
+import { TestComponent } from './src/components/TestComponent';
+
+// import './src/styles/global.css';
+// import 'nativewind/types'
 
 export default function App() {
   return (
-    <View className="flex-1 bg-gray-100">
-      <StatusBar style="dark" />
-      <RootNavigator />
+    <View className="flex-1 items-center justify-center bg-primary">
+      <Text className="text-3xl font-bold text-black">NativeWind Works!</Text>
     </View>
   );
 }
