@@ -7,9 +7,12 @@ import { View, Text, ScrollView, Alert } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { setUser } from '../../store/authSlice';
 import { signUp } from '../../services/authService';
+import { upsertUserProfile } from '../../services/userService';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { UsernameInput } from '../../components/ui/UsernameInput';
 import { Card } from '../../components/ui/Card';
+import { useUsernameValidation } from '../../hooks/useUsernameValidation';
 
 /**
  * Validates if a username is valid (alphanumeric, 3-20 characters)
@@ -62,6 +65,9 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const dispatch = useDispatch();
 
+  // Get username validation state
+  const { isAvailable, isChecking } = useUsernameValidation(username);
+
   /**
    * Validates all form fields and returns true if valid
    */
@@ -81,6 +87,10 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
     } else if (!isValidUsername(username)) {
       newErrors.username =
         'Username must be 3-20 characters, letters, numbers, and underscores only';
+    } else if (isAvailable === false) {
+      newErrors.username = 'Username is already taken';
+    } else if (isChecking) {
+      newErrors.username = 'Checking username availability...';
     }
 
     // Password validation
@@ -119,12 +129,29 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
     setIsLoading(true);
 
     try {
+      // First, create the user account
       const { data, error } = await signUp(email, password);
 
       if (error) {
         Alert.alert('Signup Error', error.message);
-      } else if (data?.user) {
-        // TODO: Save additional user data (username, DOB) to user profile
+        return;
+      }
+
+      if (data?.user) {
+        // Then, create the user profile with additional data
+        const profileResult = await upsertUserProfile(data.user.id, {
+          username,
+          dateOfBirth,
+        });
+
+        if (profileResult.error) {
+          Alert.alert(
+            'Profile Creation Error',
+            'Account created but profile setup failed. Please contact support.',
+          );
+        }
+
+        // Update Redux store with user data
         dispatch(
           setUser({
             id: data.user.id,
@@ -133,7 +160,12 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
             dateOfBirth: dateOfBirth,
           }),
         );
-        Alert.alert('Success', 'Account created! Please check your email to verify your account.');
+
+        Alert.alert(
+          'Success',
+          'Account created successfully! Please check your email to verify your account.',
+          [{ text: 'OK', onPress: () => navigation.navigate('Login') }],
+        );
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
@@ -160,13 +192,7 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
             error={errors.email}
           />
 
-          <Input
-            placeholder="Username"
-            autoCapitalize="none"
-            value={username}
-            onChangeText={setUsername}
-            error={errors.username}
-          />
+          <UsernameInput value={username} onChangeText={setUsername} error={errors.username} />
 
           <Input
             placeholder="Password"
@@ -196,7 +222,7 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
             variant="primary"
             className="mb-4"
             onPress={handleSignUp}
-            disabled={isLoading}
+            disabled={isLoading || isChecking}
           />
 
           <Button
