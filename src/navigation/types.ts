@@ -26,6 +26,13 @@ export type ChatStackParamList = {
     otherUserId: string;
     otherUsername: string;
   };
+  SnapPhotoViewer: {
+    messageId: string;
+    photoUrl: string;
+    timer: number;
+    conversationId: string;
+    userId: string;
+  };
 };
 
 /**

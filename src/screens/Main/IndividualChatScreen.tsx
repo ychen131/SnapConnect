@@ -75,6 +75,21 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
   }
 
   /**
+   * Handles tapping a message (for photo viewing)
+   */
+  function handleMessagePress(item: Message) {
+    if (item.message_type === 'photo' && item.media_url) {
+      navigation.navigate('SnapPhotoViewer', {
+        messageId: item.id,
+        photoUrl: item.media_url,
+        timer: item.timer || 3,
+        conversationId,
+        userId: user!.id,
+      });
+    }
+  }
+
+  /**
    * Renders a single message
    */
   function renderMessage({ item }: { item: Message }) {
@@ -109,16 +124,21 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
     };
 
     return (
-      <View className={`flex-row ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-3 px-4`}>
-        <View
-          className={`max-w-[70%] ${isOwnMessage ? 'bg-blue-500' : 'bg-gray-200'} rounded-lg p-3`}
-        >
-          {renderMessageContent()}
-          <Text className={`mt-1 text-xs ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'}`}>
-            {messageTime}
-          </Text>
+      <TouchableOpacity
+        onPress={() => handleMessagePress(item)}
+        activeOpacity={item.message_type === 'photo' && item.media_url ? 0.7 : 1}
+      >
+        <View className={`flex-row ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-3 px-4`}>
+          <View
+            className={`max-w-[70%] ${isOwnMessage ? 'bg-blue-500' : 'bg-gray-200'} rounded-lg p-3`}
+          >
+            {renderMessageContent()}
+            <Text className={`mt-1 text-xs ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'}`}>
+              {messageTime}
+            </Text>
+          </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   }
 

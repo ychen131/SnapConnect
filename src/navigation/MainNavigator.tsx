@@ -12,6 +12,7 @@ import ChatScreen from '../screens/Main/ChatScreen';
 import IndividualChatScreen from '../screens/Main/IndividualChatScreen';
 import StoriesScreen from '../screens/Main/StoriesScreen';
 import ProfileScreen from '../screens/Main/ProfileScreen';
+import SnapPhotoViewer from '../screens/Main/SnapPhotoViewer';
 import type { MainTabParamList, CameraStackParamList, ChatStackParamList } from './types';
 
 /**
@@ -38,6 +39,7 @@ function ChatStackNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ChatList" component={ChatScreen} />
       <Stack.Screen name="IndividualChat" component={IndividualChatScreen} />
+      <Stack.Screen name="SnapPhotoViewer" component={SnapPhotoViewer} />
     </Stack.Navigator>
   );
 }

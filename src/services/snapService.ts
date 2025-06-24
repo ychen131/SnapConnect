@@ -20,10 +20,27 @@ export async function uploadMediaToStorage(localUri: string, userId: string): Pr
 
     // Fetch the file as a blob
     const response = await fetch(localUri);
-    const blob = await response.blob();
+    // const blob = await response.blob();
 
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage.from('media').upload(path, blob);
+    // // Debug log for blob
+    // console.log('🟣 uploadMediaToStorage blob:', { size: blob.size, type: blob.type, localUri });
+
+    // // Determine content type (fallback to image/jpeg)
+    // // const contentType = blob.type || 'image/jpeg';
+    // console.log('blob:', blob);
+    const bytes = await response.arrayBuffer();
+    console.log('🟣 uploadMediaToStorage bytes:', {
+      size: bytes.byteLength,
+      type: 'image/jpeg',
+      localUri,
+    });
+
+    // Upload to Supabase Storage with correct content type
+    const { data, error } = await supabase.storage.from('media').upload(path, bytes, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: 'image/jpeg',
+    });
 
     if (error) {
       console.error('Error uploading to storage:', error);
