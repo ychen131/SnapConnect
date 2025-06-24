@@ -3,7 +3,7 @@
  * @description Camera screen with live preview, flip camera, and Snapchat-style capture button (tap for photo, hold for video). Video recording implemented.
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { CameraView, CameraType } from 'expo-camera';
 import { useCameraPermission } from '../../services/permissionService';
 import { Video, ResizeMode } from 'expo-av';
@@ -24,6 +24,7 @@ export default function CameraScreen() {
   const [pressStartTime, setPressStartTime] = useState<number | null>(null);
   const [recordingProgress, setRecordingProgress] = useState(0); // 0-100
   const [recordingDuration, setRecordingDuration] = useState(0); // in milliseconds
+  const [photoTimer, setPhotoTimer] = useState(3); // Default 3 seconds
   const cameraRef = useRef<CameraView | null>(null);
   const recordingTimeout = useRef<NodeJS.Timeout | null>(null);
   const recordingPromise = useRef<Promise<any> | null>(null);
@@ -81,6 +82,31 @@ export default function CameraScreen() {
     }
     setRecordingProgress(0);
     setRecordingDuration(0);
+  }
+
+  // Handle save functionality
+  function handleSave() {
+    console.log('💾 Saving content...');
+    // TODO: Implement save to gallery functionality
+    // For now, just close the preview
+    setPhotoUri(null);
+    setVideoUri(null);
+  }
+
+  // Handle discard functionality
+  function handleDiscard() {
+    console.log('🗑️ Discarding content...');
+    setPhotoUri(null);
+    setVideoUri(null);
+  }
+
+  // Handle send functionality
+  function handleSend() {
+    console.log('📤 Sending content...');
+    // TODO: Navigate to send screen
+    // For now, just close the preview
+    setPhotoUri(null);
+    setVideoUri(null);
   }
 
   // --- Snapchat-style capture logic ---
@@ -203,37 +229,99 @@ export default function CameraScreen() {
     }
   }
 
+  // Enhanced Photo Preview Screen
   if (photoUri) {
     return (
-      <View className="flex-1 items-center justify-center bg-black">
-        <Image source={{ uri: photoUri }} style={{ flex: 1, width: '100%' }} resizeMode="contain" />
-        <TouchableOpacity
-          className="absolute right-6 top-10 rounded bg-white/80 px-4 py-2"
-          onPress={() => setPhotoUri(null)}
-        >
-          <Text className="text-lg font-bold text-black">Close</Text>
-        </TouchableOpacity>
+      <View className="flex-1 bg-black">
+        {/* Photo Preview */}
+        <View className="flex-1">
+          <Image
+            source={{ uri: photoUri }}
+            style={{ flex: 1, width: '100%' }}
+            resizeMode="contain"
+          />
+        </View>
+
+        {/* Top Controls */}
+        <View className="absolute left-0 right-0 top-12 flex-row items-center justify-between px-4">
+          <TouchableOpacity
+            className="rounded-full bg-black/50 p-3"
+            onPress={handleDiscard}
+            accessibilityLabel="Close"
+          >
+            <Text className="text-lg font-bold text-white">✕</Text>
+          </TouchableOpacity>
+
+          <View className="flex-row space-x-2">
+            <TouchableOpacity
+              className="rounded-full bg-black/50 px-4 py-2"
+              onPress={() => setPhotoTimer(Math.max(1, photoTimer - 1))}
+            >
+              <Text className="font-bold text-white">-</Text>
+            </TouchableOpacity>
+            <View className="rounded-full bg-black/50 px-4 py-2">
+              <Text className="font-bold text-white">{photoTimer}s</Text>
+            </View>
+            <TouchableOpacity
+              className="rounded-full bg-black/50 px-4 py-2"
+              onPress={() => setPhotoTimer(Math.min(10, photoTimer + 1))}
+            >
+              <Text className="font-bold text-white">+</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Bottom Controls */}
+        <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center space-x-4 px-4">
+          <TouchableOpacity className="rounded-full bg-gray-600 px-6 py-3" onPress={handleSave}>
+            <Text className="font-bold text-white">Save</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity className="rounded-full bg-yellow-500 px-6 py-3" onPress={handleSend}>
+            <Text className="font-bold text-black">Send</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
+  // Enhanced Video Preview Screen
   if (videoUri) {
     return (
-      <View className="flex-1 items-center justify-center bg-black">
-        <Video
-          source={{ uri: videoUri }}
-          style={{ flex: 1, width: '100%' }}
-          useNativeControls
-          resizeMode={ResizeMode.CONTAIN}
-          shouldPlay
-          isLooping={false}
-        />
-        <TouchableOpacity
-          className="absolute right-6 top-10 rounded bg-white/80 px-4 py-2"
-          onPress={() => setVideoUri(null)}
-        >
-          <Text className="text-lg font-bold text-black">Close</Text>
-        </TouchableOpacity>
+      <View className="flex-1 bg-black">
+        {/* Video Preview */}
+        <View className="flex-1">
+          <Video
+            source={{ uri: videoUri }}
+            style={{ flex: 1, width: '100%' }}
+            useNativeControls
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay
+            isLooping={false}
+          />
+        </View>
+
+        {/* Top Controls */}
+        <View className="absolute left-0 right-0 top-12 flex-row items-center justify-between px-4">
+          <TouchableOpacity
+            className="rounded-full bg-black/50 p-3"
+            onPress={handleDiscard}
+            accessibilityLabel="Close"
+          >
+            <Text className="text-lg font-bold text-white">✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Bottom Controls */}
+        <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center space-x-4 px-4">
+          <TouchableOpacity className="rounded-full bg-gray-600 px-6 py-3" onPress={handleSave}>
+            <Text className="font-bold text-white">Save</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity className="rounded-full bg-yellow-500 px-6 py-3" onPress={handleSend}>
+            <Text className="font-bold text-black">Send</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
