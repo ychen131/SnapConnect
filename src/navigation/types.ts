@@ -5,10 +5,22 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
 
 /**
+ * Params for the camera stack navigator.
+ */
+export type CameraStackParamList = {
+  CameraMain: undefined;
+  SendTo: {
+    contentUri: string;
+    contentType: 'photo' | 'video';
+    photoTimer?: number;
+  };
+};
+
+/**
  * Params for the main app tab navigator.
  */
 export type MainTabParamList = {
-  Camera: undefined;
+  Camera: NavigatorScreenParams<CameraStackParamList>;
   Chat: undefined;
   Stories: undefined;
   Profile: undefined;

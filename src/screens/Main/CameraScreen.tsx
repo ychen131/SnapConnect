@@ -7,6 +7,11 @@ import { View, Text, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { CameraView, CameraType } from 'expo-camera';
 import { useCameraPermission } from '../../services/permissionService';
 import { Video, ResizeMode } from 'expo-av';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { CameraStackParamList } from '../../navigation/types';
+
+type CameraScreenNavigationProp = NativeStackNavigationProp<CameraStackParamList, 'CameraMain'>;
 
 const VIDEO_MAX_DURATION_MS = 5000;
 const TAP_THRESHOLD_MS = 200;
@@ -29,6 +34,7 @@ export default function CameraScreen() {
   const recordingTimeout = useRef<NodeJS.Timeout | null>(null);
   const recordingPromise = useRef<Promise<any> | null>(null);
   const progressTimer = useRef<NodeJS.Timeout | null>(null);
+  const navigation = useNavigation<CameraScreenNavigationProp>();
 
   if (!permission) {
     return (
@@ -103,10 +109,21 @@ export default function CameraScreen() {
   // Handle send functionality
   function handleSend() {
     console.log('📤 Sending content...');
-    // TODO: Navigate to send screen
-    // For now, just close the preview
-    setPhotoUri(null);
-    setVideoUri(null);
+
+    if (photoUri) {
+      // Navigate to SendTo screen with photo data
+      navigation.navigate('SendTo', {
+        contentUri: photoUri,
+        contentType: 'photo',
+        photoTimer: photoTimer,
+      });
+    } else if (videoUri) {
+      // Navigate to SendTo screen with video data
+      navigation.navigate('SendTo', {
+        contentUri: videoUri,
+        contentType: 'video',
+      });
+    }
   }
 
   // --- Snapchat-style capture logic ---
