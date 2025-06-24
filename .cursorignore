@@ -1,0 +1,4 @@
+!.doc/
+!.cursor/
+!.doc/**/*
+!.cursor/**/*

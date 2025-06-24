@@ -15,9 +15,25 @@ export type MainTabParamList = {
 };
 
 /**
+ * Params for the main app stack navigator (permissions + main).
+ */
+export type MainAppStackParamList = {
+  Permissions: undefined;
+  Main: NavigatorScreenParams<MainTabParamList>;
+};
+
+/**
+ * Params for the auth stack navigator.
+ */
+export type AuthStackParamList = {
+  Login: undefined;
+  Signup: undefined;
+};
+
+/**
  * Params for the root stack navigator.
  */
 export type RootStackParamList = {
-  Auth: undefined;
-  Main: NavigatorScreenParams<MainTabParamList>;
+  Auth: NavigatorScreenParams<AuthStackParamList>;
+  MainApp: NavigatorScreenParams<MainAppStackParamList>;
 };

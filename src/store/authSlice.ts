@@ -16,12 +16,14 @@ export interface AuthState {
   } | null;
   isLoading: boolean;
   error: string | null;
+  permissionsRequested: boolean;
 }
 
 const initialState: AuthState = {
   user: null,
   isLoading: false,
   error: null,
+  permissionsRequested: false,
 };
 
 /**
@@ -51,13 +53,17 @@ const authSlice = createSlice({
       state.error = action.payload;
       state.isLoading = false;
     },
+    setPermissionsRequested(state, action: PayloadAction<boolean>) {
+      state.permissionsRequested = action.payload;
+    },
     logout(state) {
       state.user = null;
       state.error = null;
       state.isLoading = false;
+      state.permissionsRequested = false;
     },
   },
 });
 
-export const { setUser, setLoading, setError, logout } = authSlice.actions;
+export const { setUser, setLoading, setError, setPermissionsRequested, logout } = authSlice.actions;
 export default authSlice.reducer;
