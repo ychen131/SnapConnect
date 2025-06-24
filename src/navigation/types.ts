@@ -17,11 +17,23 @@ export type CameraStackParamList = {
 };
 
 /**
+ * Params for the chat stack navigator.
+ */
+export type ChatStackParamList = {
+  ChatList: undefined;
+  IndividualChat: {
+    conversationId: string;
+    otherUserId: string;
+    otherUsername: string;
+  };
+};
+
+/**
  * Params for the main app tab navigator.
  */
 export type MainTabParamList = {
   Camera: NavigatorScreenParams<CameraStackParamList>;
-  Chat: undefined;
+  Chat: NavigatorScreenParams<ChatStackParamList>;
   Stories: undefined;
   Profile: undefined;
 };

@@ -16,6 +16,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { getFriendsList, searchUsers, Friend } from '../../services/friendService';
 import { uploadMediaToStorage, sendSnapToFriends } from '../../services/snapService';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface SendToScreenProps {
   navigation: any;
@@ -109,30 +110,25 @@ export default function SendToScreen({ navigation, route }: SendToScreenProps) {
    * Handles sending the snap to selected friends
    */
   async function handleSend() {
-    if (selectedFriends.size === 0 || !user?.id) {
+    if (selectedFriends.size === 0) {
+      Alert.alert('No Friends Selected', 'Please select at least one friend to send the snap to.');
       return;
     }
+
     setIsSending(true);
-    setSuccessMessage('');
     try {
-      // 1. Upload media to Supabase Storage
-      const mediaUrl = await uploadMediaToStorage(contentUri, user.id);
-      // 2. Insert snap records for each friend
-      await sendSnapToFriends({
-        senderId: user.id,
-        recipientIds: Array.from(selectedFriends),
-        mediaUrl,
-        mediaType: contentType,
-        timer: contentType === 'photo' ? photoTimer : undefined,
-      });
+      const recipientIds = Array.from(selectedFriends);
+
+      await sendSnapToFriends(contentUri, contentType, recipientIds, user!.id, photoTimer);
+
       setSuccessMessage('Snap sent!');
       setTimeout(() => {
         setIsSending(false);
         setSuccessMessage('');
-        navigation.navigate('CameraMain');
+        navigation.navigate('Chat');
       }, 1200);
     } catch (error) {
-      setIsSending(false);
+      console.error('Error sending snaps:', error);
       Alert.alert('Error', 'Failed to send snap. Please try again.');
     }
   }
@@ -213,23 +209,27 @@ export default function SendToScreen({ navigation, route }: SendToScreenProps) {
   return (
     <View className="flex-1 bg-white">
       {/* Header */}
-      <View className="flex-row items-center justify-between border-b border-gray-200 p-4">
-        <TouchableOpacity onPress={handleBack}>
-          <Text className="text-lg font-semibold text-blue-500">Back</Text>
-        </TouchableOpacity>
+      <SafeAreaView edges={['top']} className="bg-white">
+        <View className="flex-row items-center justify-between border-b border-gray-200 p-4">
+          <TouchableOpacity onPress={handleBack}>
+            <Text className="text-lg font-semibold text-blue-500">Back</Text>
+          </TouchableOpacity>
 
-        <Text className="text-lg font-bold text-gray-800">Send To</Text>
+          <Text className="text-lg font-bold text-gray-800">Send To</Text>
 
-        <TouchableOpacity
-          onPress={handleSend}
-          disabled={!hasSelectedFriends}
-          className={`rounded-full px-4 py-2 ${hasSelectedFriends ? 'bg-blue-500' : 'bg-gray-300'}`}
-        >
-          <Text className={`font-semibold ${hasSelectedFriends ? 'text-white' : 'text-gray-500'}`}>
-            Send ({selectedFriends.size})
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            onPress={handleSend}
+            disabled={!hasSelectedFriends}
+            className={`rounded-full px-4 py-2 ${hasSelectedFriends ? 'bg-blue-500' : 'bg-gray-300'}`}
+          >
+            <Text
+              className={`font-semibold ${hasSelectedFriends ? 'text-white' : 'text-gray-500'}`}
+            >
+              Send ({selectedFriends.size})
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
 
       {/* Search Bar */}
       <View className="border-b border-gray-200 p-4">
