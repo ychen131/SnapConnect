@@ -8,12 +8,13 @@ import CameraScreen from '../screens/Main/CameraScreen';
 import ChatScreen from '../screens/Main/ChatScreen';
 import StoriesScreen from '../screens/Main/StoriesScreen';
 import ProfileScreen from '../screens/Main/ProfileScreen';
+import type { MainTabParamList } from './types';
 
 /**
  * MainNavigator for signed-in users with bottom tabs.
  */
 export default function MainNavigator() {
-  const Tab = createBottomTabNavigator();
+  const Tab = createBottomTabNavigator<MainTabParamList>();
   return (
     <Tab.Navigator>
       <Tab.Screen name="Camera" component={CameraScreen} />
