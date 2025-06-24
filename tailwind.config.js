@@ -5,33 +5,36 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: '#111111',
-        'ui-primary': '#1C1C1E',
-        'ui-secondary': '#2C2C2E',
-        'text-primary': '#FFFFFF',
-        'text-secondary': '#8E8E93',
-        accent: '#007AFF',
-        error: '#FF3B30',
-        success: '#34C759',
-      },
-      fontSize: {
-        '3xl': ['30px', { lineHeight: '36px', fontWeight: '700' }],
-        xl: ['20px', { lineHeight: '28px', fontWeight: '700' }],
-        base: ['17px', { lineHeight: '24px', fontWeight: '400' }],
-        sm: ['15px', { lineHeight: '20px', fontWeight: '400' }],
-        xs: ['13px', { lineHeight: '16px', fontWeight: '400' }],
+        brand: {
+          DEFAULT: '#7c3aed', // purple-600
+          light: '#a78bfa', // purple-300
+          dark: '#4c1d95', // purple-900
+        },
+        accent: '#f59e42', // orange-400
+        background: '#f9fafb', // gray-50
+        surface: '#fff',
+        muted: '#6b7280', // gray-500
+        error: '#ef4444', // red-500
+        success: '#22c55e', // green-500
       },
       spacing: {
-        1: '4px',
-        2: '8px',
-        3: '12px',
-        4: '16px',
-        6: '24px',
-        8: '32px',
+        xs: '4px',
+        sm: '8px',
+        md: '16px',
+        lg: '24px',
+        xl: '32px',
       },
-      borderRadius: {
-        lg: '8px',
-        '2xl': '16px',
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+        heading: ['Poppins', 'ui-sans-serif', 'system-ui'],
+      },
+      fontSize: {
+        xs: ['12px', { lineHeight: '16px' }],
+        sm: ['14px', { lineHeight: '20px' }],
+        base: ['16px', { lineHeight: '24px' }],
+        lg: ['20px', { lineHeight: '28px' }],
+        xl: ['24px', { lineHeight: '32px' }],
+        '2xl': ['30px', { lineHeight: '36px' }],
       },
     },
   },
