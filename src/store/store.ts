@@ -1,6 +1,7 @@
 /**
  * @file store.ts
- * @description Configures and exports the Redux store.
+ * @description Configures and exports the Redux store. Redux DevTools are enabled by default in development mode.
+ * To customize, pass the 'devTools' option to configureStore.
  */
 import { configureStore } from '@reduxjs/toolkit';
 import counterReducer from './counterSlice';
@@ -14,6 +15,7 @@ export const store = configureStore({
     counter: counterReducer,
     auth: authReducer,
   },
+  // devTools: process.env.NODE_ENV !== 'production', // Uncomment to customize
 });
 
 export type RootState = ReturnType<typeof store.getState>;
