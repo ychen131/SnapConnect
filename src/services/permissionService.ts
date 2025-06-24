@@ -2,8 +2,7 @@
  * @file permissionService.ts
  * @description Service for handling camera and microphone permissions in SnapConnect.
  */
-import { Camera } from 'expo-camera';
-import { Audio } from 'expo-av';
+import { useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import { Alert, Linking, Platform } from 'react-native';
 
 /**
@@ -21,13 +20,34 @@ export interface PermissionResult {
 }
 
 /**
+ * Hook to get camera permissions status and request function
+ * @returns [permission, requestPermission] Camera permission hook result
+ */
+export function useCameraPermission() {
+  return useCameraPermissions();
+}
+
+/**
+ * Hook to get microphone permissions status and request function
+ * @returns [permission, requestPermission] Microphone permission hook result
+ */
+export function useMicrophonePermission() {
+  return useMicrophonePermissions();
+}
+
+/**
  * Requests camera permission and returns the status
  * @returns Promise<PermissionStatus> The camera permission status
  */
 export async function requestCameraPermission(): Promise<PermissionStatus> {
   try {
-    const { status } = await Camera.requestCameraPermissionsAsync();
-    return status as PermissionStatus;
+    const [permission, requestPermission] = useCameraPermissions();
+    if (!permission) return 'undetermined';
+
+    if (permission.granted) return 'granted';
+
+    const result = await requestPermission();
+    return result.granted ? 'granted' : 'denied';
   } catch (error) {
     console.error('Error requesting camera permission:', error);
     return 'denied';
@@ -40,8 +60,13 @@ export async function requestCameraPermission(): Promise<PermissionStatus> {
  */
 export async function requestMicrophonePermission(): Promise<PermissionStatus> {
   try {
-    const { status } = await Audio.requestPermissionsAsync();
-    return status as PermissionStatus;
+    const [permission, requestPermission] = useMicrophonePermissions();
+    if (!permission) return 'undetermined';
+
+    if (permission.granted) return 'granted';
+
+    const result = await requestPermission();
+    return result.granted ? 'granted' : 'denied';
   } catch (error) {
     console.error('Error requesting microphone permission:', error);
     return 'denied';
@@ -54,8 +79,9 @@ export async function requestMicrophonePermission(): Promise<PermissionStatus> {
  */
 export async function getCameraPermissionStatus(): Promise<PermissionStatus> {
   try {
-    const { status } = await Camera.getCameraPermissionsAsync();
-    return status as PermissionStatus;
+    const [permission] = useCameraPermissions();
+    if (!permission) return 'undetermined';
+    return permission.granted ? 'granted' : 'denied';
   } catch (error) {
     console.error('Error getting camera permission status:', error);
     return 'undetermined';
@@ -68,8 +94,9 @@ export async function getCameraPermissionStatus(): Promise<PermissionStatus> {
  */
 export async function getMicrophonePermissionStatus(): Promise<PermissionStatus> {
   try {
-    const { status } = await Audio.getPermissionsAsync();
-    return status as PermissionStatus;
+    const [permission] = useMicrophonePermissions();
+    if (!permission) return 'undetermined';
+    return permission.granted ? 'granted' : 'denied';
   } catch (error) {
     console.error('Error getting microphone permission status:', error);
     return 'undetermined';
