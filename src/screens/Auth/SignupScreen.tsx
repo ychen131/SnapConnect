@@ -4,8 +4,8 @@
  */
 // TODO: Implement signup UI and logic.
 
-import React from "react";
-import { View, Text } from "react-native";
+import React from 'react';
+import { View, Text } from 'react-native';
 
 export function SignupScreen() {
   return (
