@@ -11,6 +11,8 @@ export interface AuthState {
   user: {
     id: string;
     email: string;
+    username?: string;
+    dateOfBirth?: string;
   } | null;
   isLoading: boolean;
   error: string | null;
@@ -29,7 +31,15 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setUser(state, action: PayloadAction<{ id: string; email: string } | null>) {
+    setUser(
+      state,
+      action: PayloadAction<{
+        id: string;
+        email: string;
+        username?: string;
+        dateOfBirth?: string;
+      } | null>,
+    ) {
       state.user = action.payload;
       state.error = null;
       state.isLoading = false;

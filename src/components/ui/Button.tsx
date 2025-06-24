@@ -10,7 +10,7 @@ import { Pressable, Text, PressableProps } from 'react-native';
  */
 export interface ButtonProps extends PressableProps {
   label: string;
-  variant?: 'primary' | 'secondary' | 'accent';
+  variant?: 'primary' | 'secondary' | 'accent' | 'text';
 }
 
 /**
@@ -23,7 +23,9 @@ export function Button({ label, variant = 'primary', className = '', ...props }:
       ? 'bg-brand text-white font-heading'
       : variant === 'accent'
         ? 'bg-accent text-white font-heading'
-        : 'bg-surface border border-brand text-brand font-heading';
+        : variant === 'text'
+          ? 'bg-transparent text-brand font-heading'
+          : 'bg-surface border border-brand text-brand font-heading';
   return (
     <Pressable className={`${base} ${color} ${className}`} {...props}>
       <Text className="font-heading text-base">{label}</Text>

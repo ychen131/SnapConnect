@@ -12,27 +12,15 @@ import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 
 /**
- * Displays a simple login/signup form for testing Supabase Auth.
+ * Displays a simple login form with navigation to signup.
  */
-export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export default function LoginScreen({ navigation }: { navigation: any }) {
+  // TODO: Remove this once we have a real login screen
+  const [email, setEmail] = useState('demo-savor-1x@icloud.com');
+  const [password, setPassword] = useState('test123');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch();
-
-  async function handleSignUp() {
-    setIsLoading(true);
-    setMessage('');
-    const { data, error } = await signUp(email, password);
-    setIsLoading(false);
-    if (error) {
-      setMessage(`Sign up error: ${error.message}`);
-    } else if (data?.user) {
-      dispatch(setUser({ id: data.user.id, email: data.user.email ?? '' }));
-      setMessage('Sign up successful! Check your email.');
-    }
-  }
 
   async function handleSignIn() {
     setIsLoading(true);
@@ -48,41 +36,35 @@ export default function LoginScreen() {
   }
 
   return (
-    <View className="bg-background px-lg flex-1 items-center justify-center">
-      <Card className="dark:bg-surface-dark w-full max-w-xs">
-        <Text className="font-heading text-brand mb-md dark:text-accent text-center text-2xl">
+    <View className="flex-1 items-center justify-center bg-gray-50 px-6">
+      <Card className="w-full max-w-xs rounded-lg bg-white p-6 shadow-sm">
+        <Text className="mb-4 text-center text-2xl font-bold text-purple-600">
           Welcome to SnapConnect
         </Text>
-        <Text className="text-muted mb-lg dark:text-muted-dark text-center text-base">
-          Sign in or create an account
-        </Text>
+        <Text className="mb-6 text-center text-base text-gray-600">Sign in to your account</Text>
         <Input
-          className="mb-sm"
           placeholder="Email"
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
         />
-        <Input
-          className="mb-md"
-          placeholder="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
         <Button
           label="Sign In"
           variant="primary"
-          className="mb-sm"
+          className="mb-4"
           onPress={handleSignIn}
           disabled={isLoading}
         />
-        <Button label="Sign Up" variant="accent" onPress={handleSignUp} disabled={isLoading} />
+        <Button
+          label="Create Account"
+          variant="text"
+          onPress={() => navigation.navigate('Signup')}
+          disabled={isLoading}
+        />
         {!!message && (
-          <Text className="mt-md text-error dark:text-success max-w-xs text-center text-xs">
-            {message}
-          </Text>
+          <Text className="mt-4 max-w-xs text-center text-xs text-red-500">{message}</Text>
         )}
       </Card>
     </View>
