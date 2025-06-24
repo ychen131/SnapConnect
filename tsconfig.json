@@ -1,6 +1,18 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
-  }
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "typeRoots": ["./node_modules/@types", "./nativewind-env.d.ts"]
+  },
+  "include": ["**/*.ts", "**/*.tsx", "nativewind-env.d.ts"],
+  "exclude": [
+    "node_modules",
+    "babel.config.js",
+    "metro.config.js",
+    "global.css"
+  ]
 }
