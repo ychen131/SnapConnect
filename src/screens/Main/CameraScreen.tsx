@@ -8,7 +8,7 @@ import { CameraView, CameraType } from 'expo-camera';
 import { useCameraPermission } from '../../services/permissionService';
 import { Video, ResizeMode } from 'expo-av';
 
-const VIDEO_MAX_DURATION_MS = 15000;
+const VIDEO_MAX_DURATION_MS = 5000;
 const TAP_THRESHOLD_MS = 200;
 const MIN_RECORDING_DURATION_MS = 500; // Minimum 500ms recording
 
@@ -24,7 +24,7 @@ export default function CameraScreen() {
   const [pressStartTime, setPressStartTime] = useState<number | null>(null);
   const [recordingProgress, setRecordingProgress] = useState(0); // 0-100
   const [recordingDuration, setRecordingDuration] = useState(0); // in milliseconds
-  const cameraRef = useRef<any>(null);
+  const cameraRef = useRef<CameraView | null>(null);
   const recordingTimeout = useRef<NodeJS.Timeout | null>(null);
   const recordingPromise = useRef<Promise<any> | null>(null);
   const progressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -97,8 +97,6 @@ export default function CameraScreen() {
         // Use the full 15-second duration since we'll stop manually
         recordingPromise.current = cameraRef.current.recordAsync({
           maxDuration: VIDEO_MAX_DURATION_MS / 1000, // 15 seconds
-          quality: '720p',
-          mute: false,
         });
 
         // Start progress timer
@@ -247,6 +245,9 @@ export default function CameraScreen() {
         ref={cameraRef}
         style={{ flex: 1, position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         facing={facing}
+        mode="video"
+        mute={true}
+        mirror={facing === 'front'}
       />
       {/* Overlay UI */}
       {/* Flip Camera Button */}
