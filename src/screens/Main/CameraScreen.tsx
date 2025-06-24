@@ -1,20 +1,33 @@
 /**
  * @file CameraScreen.tsx
- * @description Camera screen with live preview, flip camera, and photo capture functionality using expo-camera (CameraView).
+ * @description Camera screen with live preview, flip camera, and Snapchat-style capture button (tap for photo, hold for video). Video recording implemented.
  */
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { CameraView, CameraType } from 'expo-camera';
 import { useCameraPermission } from '../../services/permissionService';
+import { Video, ResizeMode } from 'expo-av';
+
+const VIDEO_MAX_DURATION_MS = 15000;
+const TAP_THRESHOLD_MS = 200;
+const MIN_RECORDING_DURATION_MS = 500; // Minimum 500ms recording
 
 /**
- * Displays the camera preview, flip button, and capture button. Shows photo preview after capture.
+ * Displays the camera preview, flip button, and Snapchat-style capture button.
  */
 export default function CameraScreen() {
   const [permission, requestPermission] = useCameraPermission();
   const [facing, setFacing] = useState<CameraType>('back');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [videoUri, setVideoUri] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [pressStartTime, setPressStartTime] = useState<number | null>(null);
+  const [recordingProgress, setRecordingProgress] = useState(0); // 0-100
+  const [recordingDuration, setRecordingDuration] = useState(0); // in milliseconds
   const cameraRef = useRef<any>(null);
+  const recordingTimeout = useRef<NodeJS.Timeout | null>(null);
+  const recordingPromise = useRef<Promise<any> | null>(null);
+  const progressTimer = useRef<NodeJS.Timeout | null>(null);
 
   if (!permission) {
     return (
@@ -39,15 +52,156 @@ export default function CameraScreen() {
     setFacing((current) => (current === 'back' ? 'front' : 'back'));
   }
 
-  async function handleCapture() {
+  // Start progress timer for recording
+  function startProgressTimer() {
+    const startTime = Date.now();
+    setRecordingDuration(0);
+    setRecordingProgress(0);
+
+    progressTimer.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min((elapsed / VIDEO_MAX_DURATION_MS) * 100, 100);
+
+      setRecordingDuration(elapsed);
+      setRecordingProgress(progress);
+
+      // Auto-stop at 15 seconds
+      if (elapsed >= VIDEO_MAX_DURATION_MS) {
+        console.log('⏰ 15-second limit reached, auto-stopping recording');
+        handleStopRecording();
+      }
+    }, 100); // Update every 100ms
+  }
+
+  // Stop progress timer
+  function stopProgressTimer() {
+    if (progressTimer.current) {
+      clearInterval(progressTimer.current);
+      progressTimer.current = null;
+    }
+    setRecordingProgress(0);
+    setRecordingDuration(0);
+  }
+
+  // --- Snapchat-style capture logic ---
+  async function handlePressIn() {
+    console.log('🟢 Press In - Starting video recording...');
+    setPressStartTime(Date.now());
+
+    // Start video recording
     if (cameraRef.current) {
       try {
-        const photo = await cameraRef.current.takePictureAsync();
-        setPhotoUri(photo.uri);
+        setIsRecording(true);
+        console.log('📹 Starting video recording...');
+
+        // Use the full 15-second duration since we'll stop manually
+        recordingPromise.current = cameraRef.current.recordAsync({
+          maxDuration: VIDEO_MAX_DURATION_MS / 1000, // 15 seconds
+          quality: '720p',
+          mute: false,
+        });
+
+        // Start progress timer
+        startProgressTimer();
+
+        console.log('✅ Video recording started successfully');
       } catch (error) {
-        // Optionally show error feedback
-        console.error('Failed to take picture:', error);
+        console.error('❌ Failed to start video recording:', error);
+        setIsRecording(false);
+        setPressStartTime(null);
       }
+    } else {
+      console.error('❌ Camera ref is null');
+      setPressStartTime(null);
+    }
+  }
+
+  async function handleStopRecording() {
+    console.log('🟡 Stop Recording - isRecording:', isRecording);
+    if (isRecording && cameraRef.current) {
+      try {
+        console.log('📹 Stopping video recording...');
+        setIsRecording(false);
+
+        if (recordingTimeout.current) {
+          clearTimeout(recordingTimeout.current);
+          recordingTimeout.current = null;
+        }
+
+        // The recording promise will be processed by the useEffect
+        console.log('📹 Recording stopped, promise will be processed automatically');
+      } catch (error) {
+        console.error('❌ Failed to stop video recording:', error);
+        setIsRecording(false);
+        recordingPromise.current = null;
+      }
+    } else {
+      console.log('⚠️ Not recording or camera ref is null');
+    }
+  }
+
+  async function handlePressOut() {
+    console.log('🔴 Press Out - isRecording:', isRecording);
+    if (isRecording && cameraRef.current) {
+      console.log('📹 Stopping video recording immediately...');
+      setIsRecording(false);
+
+      try {
+        // Stop the recording immediately
+        await cameraRef.current.stopRecording();
+        console.log('📹 Recording stopped successfully');
+
+        // Stop progress timer
+        stopProgressTimer();
+
+        // Wait for the recording promise to resolve
+        if (recordingPromise.current) {
+          recordingPromise.current
+            .then((video: any) => {
+              console.log('✅ Video recorded successfully:', video);
+              if (video && video.uri) {
+                console.log('🎬 Setting video URI:', video.uri);
+                setVideoUri(video.uri);
+              } else {
+                console.error('❌ Video object is invalid:', video);
+              }
+            })
+            .catch((error: any) => {
+              console.error('❌ Recording promise rejected:', error);
+            })
+            .finally(() => {
+              recordingPromise.current = null;
+            });
+        }
+      } catch (error) {
+        console.error('❌ Failed to stop recording:', error);
+      }
+    }
+    setPressStartTime(null);
+  }
+
+  async function handlePress() {
+    console.log('👆 Press - pressStartTime:', pressStartTime);
+    if (pressStartTime) {
+      const pressDuration = Date.now() - pressStartTime;
+      console.log('⏱️ Press duration:', pressDuration, 'ms');
+
+      if (pressDuration < TAP_THRESHOLD_MS) {
+        // Tap: Take photo
+        console.log('📸 Taking photo (tap detected)');
+        if (cameraRef.current) {
+          try {
+            const photo = await cameraRef.current.takePictureAsync();
+            console.log('✅ Photo taken successfully:', photo.uri);
+            setPhotoUri(photo.uri);
+          } catch (error) {
+            console.error('❌ Failed to take picture:', error);
+          }
+        }
+      } else {
+        console.log('📹 Long press detected, photo not taken');
+      }
+      setPressStartTime(null);
     }
   }
 
@@ -65,31 +219,87 @@ export default function CameraScreen() {
     );
   }
 
+  if (videoUri) {
+    return (
+      <View className="flex-1 items-center justify-center bg-black">
+        <Video
+          source={{ uri: videoUri }}
+          style={{ flex: 1, width: '100%' }}
+          useNativeControls
+          resizeMode={ResizeMode.CONTAIN}
+          shouldPlay
+          isLooping={false}
+        />
+        <TouchableOpacity
+          className="absolute right-6 top-10 rounded bg-white/80 px-4 py-2"
+          onPress={() => setVideoUri(null)}
+        >
+          <Text className="text-lg font-bold text-black">Close</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-black">
-      <CameraView ref={cameraRef} style={{ flex: 1 }} facing={facing}>
-        {/* Flip Camera Button */}
-        <View className="absolute bottom-28 left-0 right-0 items-center">
+      {/* Camera Preview as background */}
+      <CameraView
+        ref={cameraRef}
+        style={{ flex: 1, position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        facing={facing}
+      />
+      {/* Overlay UI */}
+      {/* Flip Camera Button */}
+      <View className="absolute bottom-28 left-0 right-0 items-center">
+        <TouchableOpacity
+          className="rounded-full bg-white/80 px-6 py-3"
+          onPress={toggleCameraFacing}
+          accessibilityLabel="Flip Camera"
+        >
+          <Text className="text-lg font-bold text-black">Flip Camera</Text>
+        </TouchableOpacity>
+      </View>
+      {/* Snapchat-style Capture Button */}
+      <View className="absolute bottom-8 left-0 right-0 items-center">
+        <View className="relative">
+          {/* Progress ring */}
+          {isRecording && (
+            <View
+              className="absolute inset-0 rounded-full border-4 border-gray-300"
+              style={{
+                borderTopColor: recordingProgress >= 25 ? 'red' : 'gray',
+                borderRightColor: recordingProgress >= 50 ? 'red' : 'gray',
+                borderBottomColor: recordingProgress >= 75 ? 'red' : 'gray',
+                borderLeftColor: recordingProgress >= 100 ? 'red' : 'gray',
+              }}
+            />
+          )}
+
           <TouchableOpacity
-            className="rounded-full bg-white/80 px-6 py-3"
-            onPress={toggleCameraFacing}
-            accessibilityLabel="Flip Camera"
-          >
-            <Text className="text-lg font-bold text-black">Flip Camera</Text>
-          </TouchableOpacity>
-        </View>
-        {/* Capture Button */}
-        <View className="absolute bottom-8 left-0 right-0 items-center">
-          <TouchableOpacity
-            className="h-20 w-20 items-center justify-center rounded-full border-4 border-gray-300 bg-white"
-            onPress={handleCapture}
-            accessibilityLabel="Take Photo"
+            className={`h-20 w-20 items-center justify-center rounded-full border-4 ${
+              isRecording ? 'border-red-500 bg-red-100' : 'border-gray-300 bg-white'
+            }`}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            onPress={handlePress}
+            accessibilityLabel="Snapchat-style Capture"
             activeOpacity={0.7}
           >
-            <View className="h-12 w-12 rounded-full bg-gray-200" />
+            <View
+              className={`h-12 w-12 rounded-full ${isRecording ? 'bg-red-500' : 'bg-gray-200'}`}
+            />
           </TouchableOpacity>
         </View>
-      </CameraView>
+
+        {isRecording && (
+          <View className="mt-2 rounded bg-red-500 px-3 py-1">
+            <Text className="text-sm font-bold text-white">
+              Recording... {Math.round(recordingDuration / 1000)}s ({Math.round(recordingProgress)}
+              %)
+            </Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
