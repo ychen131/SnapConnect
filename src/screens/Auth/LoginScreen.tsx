@@ -1,12 +1,15 @@
 /**
  * @file LoginScreen.tsx
- * @description Login/signup form for Supabase Auth, dispatches user to Redux on success.
+ * @description Login/signup form for Supabase Auth, dispatches user to Redux on success. Dark mode support is present but toggle button is removed for now.
  */
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { setUser } from '../../store/authSlice';
 import { signIn, signUp } from '../../services/authService';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Card } from '../../components/ui/Card';
 
 /**
  * Displays a simple login/signup form for testing Supabase Auth.
@@ -46,44 +49,42 @@ export default function LoginScreen() {
 
   return (
     <View className="bg-background px-lg flex-1 items-center justify-center">
-      <View className="bg-surface p-lg w-full max-w-xs rounded-xl shadow">
-        <Text className="font-heading text-brand mb-md text-center text-2xl">
+      <Card className="dark:bg-surface-dark w-full max-w-xs">
+        <Text className="font-heading text-brand mb-md dark:text-accent text-center text-2xl">
           Welcome to SnapConnect
         </Text>
-        <Text className="text-muted mb-lg text-center text-base">Sign in or create an account</Text>
-        <TextInput
-          className="mb-sm border-brand px-md py-sm w-full rounded border bg-white text-base"
+        <Text className="text-muted mb-lg dark:text-muted-dark text-center text-base">
+          Sign in or create an account
+        </Text>
+        <Input
+          className="mb-sm"
           placeholder="Email"
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
         />
-        <TextInput
-          className="mb-md border-brand px-md py-sm w-full rounded border bg-white text-base"
+        <Input
+          className="mb-md"
           placeholder="Password"
           secureTextEntry
           value={password}
           onChangeText={setPassword}
         />
-        <Pressable
-          className="bg-brand px-md py-sm mb-sm w-full items-center rounded"
+        <Button
+          label="Sign In"
+          variant="primary"
+          className="mb-sm"
           onPress={handleSignIn}
           disabled={isLoading}
-        >
-          <Text className="font-heading text-base text-white">Sign In</Text>
-        </Pressable>
-        <Pressable
-          className="bg-accent px-md py-sm w-full items-center rounded"
-          onPress={handleSignUp}
-          disabled={isLoading}
-        >
-          <Text className="font-heading text-base text-white">Sign Up</Text>
-        </Pressable>
+        />
+        <Button label="Sign Up" variant="accent" onPress={handleSignUp} disabled={isLoading} />
         {!!message && (
-          <Text className="mt-md text-error max-w-xs text-center text-xs">{message}</Text>
+          <Text className="mt-md text-error dark:text-success max-w-xs text-center text-xs">
+            {message}
+          </Text>
         )}
-      </View>
+      </Card>
     </View>
   );
 }
