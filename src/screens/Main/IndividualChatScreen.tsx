@@ -13,6 +13,9 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  ActionSheetIOS,
+  Alert,
+  Modal,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
@@ -44,6 +47,10 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [newMessage, setNewMessage] = useState('');
   const flatListRef = useRef<FlatList>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [replyModalVisible, setReplyModalVisible] = useState(false);
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+  const [replyText, setReplyText] = useState('');
 
   /**
    * Fetches messages for this conversation
@@ -131,6 +138,62 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
     }
   }
 
+  async function handleSendTextReply() {
+    if (!replyText.trim() || !user?.id || !replyToMessage) return;
+    try {
+      const { error } = await supabase.from('messages').insert({
+        conversation_id: conversationId,
+        sender_id: user.id,
+        recipient_id: otherUserId,
+        message_type: 'text',
+        content: replyText.trim(),
+        reply_to_message_id: replyToMessage.id,
+        is_viewed: false,
+      });
+      if (error) {
+        console.error('❌ Error sending reply:', error);
+        return;
+      }
+      setReplyText('');
+      setReplyModalVisible(false);
+      setReplyToMessage(null);
+      await fetchMessages();
+    } catch (err) {
+      console.error('❌ Error sending reply:', err);
+    }
+  }
+
+  function handleLongPressMessage(item: Message) {
+    if (item.message_type !== 'text') return;
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Reply'],
+          cancelButtonIndex: 0,
+          userInterfaceStyle: 'light',
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            setReplyToMessage(item);
+            setReplyModalVisible(true);
+          }
+        },
+      );
+    } else {
+      // For Android, use Alert as a simple ActionSheet replacement
+      Alert.alert('Message Options', '', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reply',
+          onPress: () => {
+            setReplyToMessage(item);
+            setReplyModalVisible(true);
+          },
+        },
+      ]);
+    }
+  }
+
   /**
    * Renders a single message
    */
@@ -164,11 +227,15 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
           userId: user!.id,
         });
       } else {
-        // For text, scroll to and highlight (placeholder for now)
-        // TODO: Implement scroll-to and highlight for text
-        // You could use refs and FlatList's scrollToIndex
-        // For now, just show an alert
-        alert('Jump to original text message coming soon!');
+        // For text, scroll to and highlight
+        const idx = messages.findIndex((msg) => msg.id === originalMessage.id);
+        if (idx !== -1) {
+          flatListRef.current?.scrollToIndex({ index: idx, animated: true });
+          setHighlightedMessageId(originalMessage.id);
+          setTimeout(() => setHighlightedMessageId(null), 1200);
+        } else {
+          alert('Original message not found.');
+        }
       }
     }
 
@@ -219,9 +286,16 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
       }
     };
 
+    // Highlight style for jump-to-original
+    const highlightStyle =
+      highlightedMessageId === item.id
+        ? { backgroundColor: '#FEF08A' } // yellow-100
+        : {};
+
     return (
       <TouchableOpacity
         onPress={() => handleMessagePress(item)}
+        onLongPress={() => handleLongPressMessage(item)}
         activeOpacity={
           (item.message_type === 'photo' || item.message_type === 'video') && item.media_url
             ? 0.7
@@ -235,6 +309,7 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
             borderLeftWidth: isReply ? 2 : 0,
             borderLeftColor: '#3B82F6',
             paddingLeft: isReply ? 8 : 0,
+            ...highlightStyle,
           }}
         >
           <View
@@ -335,6 +410,9 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
         inverted={false}
+        onContentSizeChange={() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }}
       />
 
       {/* Text Input and Send Button */}
@@ -362,6 +440,57 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Reply Modal for text messages */}
+      {replyToMessage && (
+        <Modal
+          visible={replyModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setReplyModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center' }}>
+            <View style={{ margin: 24, backgroundColor: 'white', borderRadius: 12, padding: 20 }}>
+              <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>Replying to:</Text>
+              <Text style={{ color: '#6B7280', marginBottom: 16 }} numberOfLines={2}>
+                {replyToMessage.content}
+              </Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#E5E7EB',
+                  borderRadius: 8,
+                  padding: 12,
+                  fontSize: 16,
+                  marginBottom: 12,
+                  minHeight: 40,
+                }}
+                placeholder="Type your reply..."
+                value={replyText}
+                onChangeText={setReplyText}
+                multiline
+                maxLength={500}
+                autoFocus
+              />
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <TouchableOpacity
+                  onPress={() => setReplyModalVisible(false)}
+                  style={{ marginRight: 16 }}
+                >
+                  <Text style={{ color: '#3B82F6', fontWeight: 'bold' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleSendTextReply}
+                  disabled={!replyText.trim()}
+                  style={{ opacity: replyText.trim() ? 1 : 0.5 }}
+                >
+                  <Text style={{ color: '#3B82F6', fontWeight: 'bold' }}>Send</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
