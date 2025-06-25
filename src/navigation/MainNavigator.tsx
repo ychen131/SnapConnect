@@ -12,9 +12,15 @@ import ChatScreen from '../screens/Main/ChatScreen';
 import IndividualChatScreen from '../screens/Main/IndividualChatScreen';
 import StoriesScreen from '../screens/Main/StoriesScreen';
 import ProfileScreen from '../screens/Main/ProfileScreen';
+import AddFriendsScreen from '../screens/Main/AddFriendsScreen';
 import SnapPhotoViewer from '../screens/Main/SnapPhotoViewer';
 import SnapVideoViewer from '../screens/Main/SnapVideoViewer';
-import type { MainTabParamList, CameraStackParamList, ChatStackParamList } from './types';
+import type {
+  MainTabParamList,
+  CameraStackParamList,
+  ChatStackParamList,
+  ProfileStackParamList,
+} from './types';
 
 /**
  * Camera stack navigator for camera-related screens
@@ -42,6 +48,20 @@ function ChatStackNavigator() {
       <Stack.Screen name="IndividualChat" component={IndividualChatScreen} />
       <Stack.Screen name="SnapPhotoViewer" component={SnapPhotoViewer} />
       <Stack.Screen name="SnapVideoViewer" component={SnapVideoViewer} />
+    </Stack.Navigator>
+  );
+}
+
+/**
+ * Profile stack navigator for profile-related screens
+ */
+function ProfileStackNavigator() {
+  const Stack = createNativeStackNavigator<ProfileStackParamList>();
+
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ProfileMain" component={ProfileScreen} />
+      <Stack.Screen name="AddFriends" component={AddFriendsScreen} />
     </Stack.Navigator>
   );
 }
@@ -84,7 +104,7 @@ export default function MainNavigator() {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileStackNavigator}
         options={{
           tabBarLabel: 'Profile',
           tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>👤</Text>,

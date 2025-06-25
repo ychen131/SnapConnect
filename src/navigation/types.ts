@@ -42,13 +42,21 @@ export type ChatStackParamList = {
 };
 
 /**
+ * Params for the profile stack navigator.
+ */
+export type ProfileStackParamList = {
+  ProfileMain: undefined;
+  AddFriends: undefined;
+};
+
+/**
  * Params for the main app tab navigator.
  */
 export type MainTabParamList = {
   Camera: NavigatorScreenParams<CameraStackParamList>;
   Chat: NavigatorScreenParams<ChatStackParamList>;
   Stories: undefined;
-  Profile: undefined;
+  Profile: NavigatorScreenParams<ProfileStackParamList>;
 };
 
 /**
