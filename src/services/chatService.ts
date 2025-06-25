@@ -39,11 +39,14 @@ export interface Message {
   timer?: number;
   is_viewed: boolean;
   viewed_at?: string;
+  reply_to_message_id?: string;
   created_at: string;
   updated_at: string;
   // Computed fields
   sender_username: string;
   sender_avatar_url?: string;
+  // Reply-related computed fields
+  original_message?: Message;
 }
 
 /**
@@ -145,12 +148,41 @@ export async function getMessages(conversationId: string, userId: string): Promi
       return [];
     }
 
-    // Transform the data to include computed fields
-    const messages: Message[] = (data || []).map((msg) => ({
-      ...msg,
-      sender_username: msg.profiles?.username || 'Unknown User',
-      sender_avatar_url: msg.profiles?.avatar_url,
-    }));
+    // Transform the data to include computed fields and reply relationships
+    const messages: Message[] = await Promise.all(
+      (data || []).map(async (msg) => {
+        let originalMessage: Message | undefined;
+
+        // If this is a reply, fetch the original message
+        if (msg.reply_to_message_id) {
+          const { data: originalData } = await supabase
+            .from('messages')
+            .select(
+              `
+              *,
+              profiles!messages_sender_id_fkey(username, avatar_url)
+            `,
+            )
+            .eq('id', msg.reply_to_message_id)
+            .single();
+
+          if (originalData) {
+            originalMessage = {
+              ...originalData,
+              sender_username: originalData.profiles?.username || 'Unknown User',
+              sender_avatar_url: originalData.profiles?.avatar_url,
+            };
+          }
+        }
+
+        return {
+          ...msg,
+          sender_username: msg.profiles?.username || 'Unknown User',
+          sender_avatar_url: msg.profiles?.avatar_url,
+          original_message: originalMessage,
+        };
+      }),
+    );
 
     return messages;
   } catch (error) {
@@ -214,6 +246,68 @@ export async function getOrCreateConversation(user1Id: string, user2Id: string):
     return data;
   } catch (error) {
     console.error('Error getting or creating conversation:', error);
+    throw error;
+  }
+}
+
+/**
+ * Sends a text reply to a specific message
+ * @param conversationId The conversation ID
+ * @param senderId The sender's user ID
+ * @param recipientId The recipient's user ID
+ * @param replyText The text content of the reply
+ * @param replyToMessageId The ID of the message being replied to
+ * @returns Promise<boolean> Success status
+ */
+export async function sendTextReply(
+  conversationId: string,
+  senderId: string,
+  recipientId: string,
+  replyText: string,
+  replyToMessageId: string,
+): Promise<boolean> {
+  try {
+    console.log('💬 Sending text reply:', {
+      conversationId,
+      senderId,
+      recipientId,
+      replyText,
+      replyToMessageId,
+    });
+
+    // Verify the original message exists and is in the same conversation
+    const { data: originalMessage, error: fetchError } = await supabase
+      .from('messages')
+      .select('id, conversation_id, message_type, content, media_url')
+      .eq('id', replyToMessageId)
+      .eq('conversation_id', conversationId)
+      .single();
+
+    if (fetchError || !originalMessage) {
+      console.error('❌ Original message not found or not in conversation:', fetchError);
+      throw new Error('Original message not found');
+    }
+
+    // Create the reply message
+    const { error: insertError } = await supabase.from('messages').insert({
+      conversation_id: conversationId,
+      sender_id: senderId,
+      recipient_id: recipientId,
+      message_type: 'text',
+      content: replyText,
+      reply_to_message_id: replyToMessageId,
+      is_viewed: false,
+    });
+
+    if (insertError) {
+      console.error('❌ Error creating reply message:', insertError);
+      throw insertError;
+    }
+
+    console.log('✅ Text reply sent successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error sending text reply:', error);
     throw error;
   }
 }

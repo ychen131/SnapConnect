@@ -75,7 +75,7 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
   }
 
   /**
-   * Handles tapping a message (for photo viewing)
+   * Handles tapping a message (for photo and video viewing)
    */
   function handleMessagePress(item: Message) {
     if (item.message_type === 'photo' && item.media_url) {
@@ -86,18 +86,56 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
         conversationId,
         userId: user!.id,
       });
+    } else if (item.message_type === 'video' && item.media_url) {
+      navigation.navigate('SnapVideoViewer', {
+        messageId: item.id,
+        videoUrl: item.media_url,
+        conversationId,
+        userId: user!.id,
+      });
     }
   }
 
   /**
    * Renders a single message
    */
-  function renderMessage({ item }: { item: Message }) {
+  function renderMessage({ item, index }: { item: Message; index: number }) {
     const isOwnMessage = item.sender_id === user?.id;
     const messageTime = new Date(item.created_at).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
     });
+
+    // Check if this is a reply
+    const isReply = !!item.reply_to_message_id;
+    const originalMessage = item.original_message;
+
+    // Handler for tapping the reply context
+    function handleReplyContextPress() {
+      if (!originalMessage) return;
+      if (originalMessage.message_type === 'photo' && originalMessage.media_url) {
+        navigation.navigate('SnapPhotoViewer', {
+          messageId: originalMessage.id,
+          photoUrl: originalMessage.media_url,
+          timer: originalMessage.timer || 3,
+          conversationId,
+          userId: user!.id,
+        });
+      } else if (originalMessage.message_type === 'video' && originalMessage.media_url) {
+        navigation.navigate('SnapVideoViewer', {
+          messageId: originalMessage.id,
+          videoUrl: originalMessage.media_url,
+          conversationId,
+          userId: user!.id,
+        });
+      } else {
+        // For text, scroll to and highlight (placeholder for now)
+        // TODO: Implement scroll-to and highlight for text
+        // You could use refs and FlatList's scrollToIndex
+        // For now, just show an alert
+        alert('Jump to original text message coming soon!');
+      }
+    }
 
     const renderMessageContent = () => {
       switch (item.message_type) {
@@ -118,6 +156,29 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
             </View>
           );
 
+        case 'text':
+          return (
+            <View>
+              {isReply && originalMessage && (
+                <TouchableOpacity
+                  className="mb-1 rounded bg-gray-100 p-2"
+                  onPress={handleReplyContextPress}
+                  activeOpacity={0.7}
+                >
+                  <Text className="text-xs text-blue-600 underline">
+                    ↩️ Replying to{' '}
+                    {originalMessage.message_type === 'photo'
+                      ? '📸 Photo'
+                      : originalMessage.message_type === 'video'
+                        ? '🎬 Video'
+                        : originalMessage.content || 'message'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <Text className="text-base text-gray-800">{item.content || 'No content'}</Text>
+            </View>
+          );
+
         default:
           return <Text className="text-base text-gray-800">{item.content || 'No content'}</Text>;
       }
@@ -126,11 +187,26 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
     return (
       <TouchableOpacity
         onPress={() => handleMessagePress(item)}
-        activeOpacity={item.message_type === 'photo' && item.media_url ? 0.7 : 1}
+        activeOpacity={
+          (item.message_type === 'photo' || item.message_type === 'video') && item.media_url
+            ? 0.7
+            : 1
+        }
       >
-        <View className={`flex-row ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-3 px-4`}>
+        <View
+          className={`flex-row ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-3 px-4`}
+          style={{
+            marginLeft: isReply ? 20 : 0,
+            borderLeftWidth: isReply ? 2 : 0,
+            borderLeftColor: '#3B82F6',
+            paddingLeft: isReply ? 8 : 0,
+          }}
+        >
           <View
             className={`max-w-[70%] ${isOwnMessage ? 'bg-blue-500' : 'bg-gray-200'} rounded-lg p-3`}
+            style={{
+              opacity: isReply ? 0.9 : 1,
+            }}
           >
             {renderMessageContent()}
             <Text className={`mt-1 text-xs ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'}`}>

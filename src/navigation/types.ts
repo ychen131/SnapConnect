@@ -33,6 +33,12 @@ export type ChatStackParamList = {
     conversationId: string;
     userId: string;
   };
+  SnapVideoViewer: {
+    messageId: string;
+    videoUrl: string;
+    conversationId: string;
+    userId: string;
+  };
 };
 
 /**

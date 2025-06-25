@@ -6,6 +6,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Image, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { markMessagesAsViewed } from '../../services/chatService';
+import { sendTextReply } from '../../services/chatService';
+import { supabase } from '../../services/supabase';
+import ReplyInputModal from '../../components/ui/ReplyInputModal';
 
 interface SnapPhotoViewerProps {
   navigation: any;
@@ -26,6 +29,7 @@ interface SnapPhotoViewerProps {
 export default function SnapPhotoViewer({ navigation, route }: SnapPhotoViewerProps) {
   const { messageId, photoUrl, timer, conversationId, userId } = route.params;
   const [secondsLeft, setSecondsLeft] = useState(timer || 3);
+  const [showReplyModal, setShowReplyModal] = useState(false);
 
   // Debug log for photoUrl
   console.log('🖼️ SnapPhotoViewer photoUrl:', photoUrl);
@@ -48,6 +52,43 @@ export default function SnapPhotoViewer({ navigation, route }: SnapPhotoViewerPr
     navigation.goBack();
   }
 
+  /**
+   * Handles reply button press
+   */
+  function handleReply() {
+    console.log('💬 Reply button pressed for message:', messageId);
+    setShowReplyModal(true);
+  }
+
+  /**
+   * Handles sending a text reply
+   */
+  async function handleSendReply(replyText: string) {
+    console.log('📤 Sending reply:', replyText, 'to message:', messageId);
+
+    try {
+      // For replies, we need to send to the original message sender
+      // Since we're viewing their snap, we reply to them
+      const { data: originalMessage } = await supabase
+        .from('messages')
+        .select('sender_id')
+        .eq('id', messageId)
+        .single();
+
+      if (!originalMessage) {
+        throw new Error('Original message not found');
+      }
+
+      await sendTextReply(conversationId, userId, originalMessage.sender_id, replyText, messageId);
+
+      setShowReplyModal(false);
+      console.log('✅ Reply sent successfully');
+    } catch (error) {
+      console.error('❌ Error sending reply:', error);
+      // TODO: Show error message to user
+    }
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
       <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={handleClose}>
@@ -55,6 +96,8 @@ export default function SnapPhotoViewer({ navigation, route }: SnapPhotoViewerPr
           source={{ uri: photoUrl }}
           style={{ flex: 1, resizeMode: 'contain', backgroundColor: 'black' }}
         />
+
+        {/* Timer Display */}
         <View
           style={{
             position: 'absolute',
@@ -68,7 +111,35 @@ export default function SnapPhotoViewer({ navigation, route }: SnapPhotoViewerPr
         >
           <Text style={{ color: 'white', fontSize: 20, fontWeight: 'bold' }}>{secondsLeft}s</Text>
         </View>
+
+        {/* Reply Button */}
+        <TouchableOpacity
+          style={{
+            position: 'absolute',
+            bottom: 40,
+            right: 20,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            borderRadius: 25,
+            width: 50,
+            height: 50,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+          onPress={handleReply}
+          activeOpacity={0.8}
+        >
+          <Text style={{ color: 'white', fontSize: 20 }}>💬</Text>
+        </TouchableOpacity>
       </TouchableOpacity>
+
+      {/* Reply Input Modal */}
+      <ReplyInputModal
+        visible={showReplyModal}
+        onClose={() => setShowReplyModal(false)}
+        onSend={handleSendReply}
+        originalMessageId={messageId}
+        originalMessageType="photo"
+      />
     </SafeAreaView>
   );
 }
