@@ -10,12 +10,16 @@ import {
   FlatList,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { getMessages, markMessagesAsViewed, Message } from '../../services/chatService';
 import { Video, ResizeMode } from 'expo-av';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '../../services/supabase';
 
 interface IndividualChatScreenProps {
   navigation: any;
@@ -38,6 +42,7 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [newMessage, setNewMessage] = useState('');
 
   /**
    * Fetches messages for this conversation
@@ -93,6 +98,33 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
         conversationId,
         userId: user!.id,
       });
+    }
+  }
+
+  /**
+   * Handles sending a new text message
+   */
+  async function handleSendMessage() {
+    if (!newMessage.trim() || !user?.id) return;
+    try {
+      // Insert new text message (not a reply)
+      const { error } = await supabase.from('messages').insert({
+        conversation_id: conversationId,
+        sender_id: user.id,
+        recipient_id: otherUserId,
+        message_type: 'text',
+        content: newMessage.trim(),
+        is_viewed: false,
+      });
+      if (error) {
+        console.error('❌ Error sending message:', error);
+        return;
+      }
+      setNewMessage('');
+      // Refresh messages
+      await fetchMessages();
+    } catch (err) {
+      console.error('❌ Error sending message:', err);
     }
   }
 
@@ -235,6 +267,28 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
   // Load messages on mount
   useEffect(() => {
     fetchMessages();
+
+    // Set up Supabase Realtime subscription for messages in this conversation
+    const channel = supabase
+      .channel('realtime-messages-' + conversationId)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          console.log('Realtime event:', payload); // Debug log
+          fetchMessages();
+        },
+      )
+      .subscribe();
+
+    // Clean up subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [conversationId, user?.id]);
 
   if (isLoading) {
@@ -278,6 +332,32 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
         showsVerticalScrollIndicator={false}
         inverted={false}
       />
+
+      {/* Text Input and Send Button */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={80}
+      >
+        <View className="flex-row items-center border-t border-gray-200 bg-white px-4 py-2">
+          <TextInput
+            className="flex-1 rounded-lg bg-gray-100 px-4 py-3 text-gray-800"
+            placeholder="Type a message..."
+            value={newMessage}
+            onChangeText={setNewMessage}
+            multiline
+            maxLength={500}
+            style={{ minHeight: 40, maxHeight: 100 }}
+          />
+          <TouchableOpacity
+            className="ml-2 rounded-full bg-blue-500 px-4 py-2"
+            onPress={handleSendMessage}
+            disabled={!newMessage.trim()}
+            activeOpacity={newMessage.trim() ? 0.7 : 1}
+          >
+            <Text className="font-semibold text-white">Send</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
