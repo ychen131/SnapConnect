@@ -2,7 +2,7 @@
  * @file IndividualChatScreen.tsx
  * @description Individual chat screen showing message history for a specific conversation.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -43,6 +43,7 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [newMessage, setNewMessage] = useState('');
+  const flatListRef = useRef<FlatList>(null);
 
   /**
    * Fetches messages for this conversation
@@ -53,7 +54,9 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
     try {
       const data = await getMessages(conversationId, user.id);
       setMessages(data);
-
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
       // Mark messages as viewed when opening the chat
       await markMessagesAsViewed(conversationId, user.id);
     } catch (error) {
@@ -318,6 +321,7 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
 
       {/* Messages List */}
       <FlatList
+        ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
