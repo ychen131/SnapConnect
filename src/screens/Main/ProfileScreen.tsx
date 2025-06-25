@@ -2,12 +2,14 @@
  * @file ProfileScreen.tsx
  * @description Profile screen displaying user information and friend management options.
  */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { RootState } from '../../store';
 import { logout } from '../../store/authSlice';
+import { getFriendsList } from '../../services/friendService';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 
@@ -17,6 +19,49 @@ import { Button } from '../../components/ui/Button';
 export default function ProfileScreen({ navigation }: { navigation: any }) {
   const user = useSelector((state: RootState) => state.auth.user);
   const dispatch = useDispatch();
+  const [friendCount, setFriendCount] = useState(0);
+  const [snapCount, setSnapCount] = useState(0);
+  const [storyCount, setStoryCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load user stats when component mounts
+  useEffect(() => {
+    if (user?.id) {
+      loadUserStats();
+    }
+  }, [user?.id]);
+
+  // Refresh stats when screen comes into focus (e.g., after adding friends)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user?.id) {
+        loadUserStats();
+      }
+    }, [user?.id]),
+  );
+
+  /**
+   * Loads user statistics (friends, snaps, stories)
+   */
+  async function loadUserStats() {
+    if (!user?.id) return;
+
+    setIsLoading(true);
+    try {
+      // Load friend count
+      const friends = await getFriendsList(user.id);
+      setFriendCount(friends.length);
+
+      // TODO: Load snap count and story count when those features are implemented
+      // For now, we'll keep them at 0
+      setSnapCount(0);
+      setStoryCount(0);
+    } catch (error) {
+      console.error('Error loading user stats:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   /**
    * Handles user logout
@@ -86,15 +131,21 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
             {/* User Stats */}
             <View className="mb-6 flex-row justify-around">
               <View className="items-center">
-                <Text className="text-2xl font-bold text-purple-600">0</Text>
+                <Text className="text-2xl font-bold text-purple-600">
+                  {isLoading ? '...' : friendCount}
+                </Text>
                 <Text className="text-sm text-gray-500">Friends</Text>
               </View>
               <View className="items-center">
-                <Text className="text-2xl font-bold text-purple-600">0</Text>
+                <Text className="text-2xl font-bold text-purple-600">
+                  {isLoading ? '...' : snapCount}
+                </Text>
                 <Text className="text-sm text-gray-500">Snaps Sent</Text>
               </View>
               <View className="items-center">
-                <Text className="text-2xl font-bold text-purple-600">0</Text>
+                <Text className="text-2xl font-bold text-purple-600">
+                  {isLoading ? '...' : storyCount}
+                </Text>
                 <Text className="text-sm text-gray-500">Stories</Text>
               </View>
             </View>

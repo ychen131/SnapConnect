@@ -27,25 +27,15 @@ export interface Friend {
  */
 export async function getFriendsList(userId: string): Promise<Friend[]> {
   try {
-    // Get friends from the friendships table
+    // Get friends from the friendships table using table aliases for both profile joins
     const { data, error } = await supabase
       .from('friendships')
       .select(
         `
         user1_id,
         user2_id,
-        profiles!friendships_user1_id_fkey(
-          id,
-          username,
-          avatar_url,
-          created_at
-        ),
-        profiles!friendships_user2_id_fkey(
-          id,
-          username,
-          avatar_url,
-          created_at
-        )
+        user1:profiles!friendships_user1_id_fkey(id, username, avatar_url, created_at),
+        user2:profiles!friendships_user2_id_fkey(id, username, avatar_url, created_at)
       `,
       )
       .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
@@ -58,10 +48,7 @@ export async function getFriendsList(userId: string): Promise<Friend[]> {
     // Transform the data to include the friend's profile (not the current user's)
     const friends: Friend[] = (data || []).map((friendship: any) => {
       const isUser1 = friendship.user1_id === userId;
-      const friendProfile = isUser1
-        ? friendship.profiles_user2_id_fkey
-        : friendship.profiles_user1_id_fkey;
-
+      const friendProfile = isUser1 ? friendship.user2 : friendship.user1;
       return {
         id: friendProfile?.id || (isUser1 ? friendship.user2_id : friendship.user1_id),
         username: friendProfile?.username || 'Unknown User',
