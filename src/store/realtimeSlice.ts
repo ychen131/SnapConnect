@@ -1,6 +1,6 @@
 /**
  * @file realtimeSlice.ts
- * @description Redux slice for managing realtime subscription state and message notifications.
+ * @description Redux slice for managing realtime subscription state and message/snap notifications.
  */
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
@@ -15,6 +15,14 @@ export interface RealtimeState {
     count: number;
     lastMessageAt: string;
   }[];
+  newSnapNotifications: {
+    senderId: string;
+    senderUsername: string;
+    snapId: string;
+    mediaType: 'photo' | 'video';
+    timer?: number;
+    receivedAt: string;
+  }[];
   error: string | null;
 }
 
@@ -22,6 +30,7 @@ const initialState: RealtimeState = {
   isConnected: false,
   activeSubscriptions: [],
   newMessageNotifications: [],
+  newSnapNotifications: [],
   error: null,
 };
 
@@ -37,6 +46,7 @@ const realtimeSlice = createSlice({
       if (!action.payload) {
         // Clear notifications when disconnected
         state.newMessageNotifications = [];
+        state.newSnapNotifications = [];
       }
     },
     addActiveSubscription(state, action: PayloadAction<string>) {
@@ -83,6 +93,33 @@ const realtimeSlice = createSlice({
     clearAllMessageNotifications(state) {
       state.newMessageNotifications = [];
     },
+    addNewSnapNotification(
+      state,
+      action: PayloadAction<{
+        senderId: string;
+        senderUsername: string;
+        snapId: string;
+        mediaType: 'photo' | 'video';
+        timer?: number;
+        receivedAt: string;
+      }>,
+    ) {
+      // Add new snap notification to the beginning of the array
+      state.newSnapNotifications.unshift(action.payload);
+
+      // Keep only the last 50 snap notifications to prevent memory issues
+      if (state.newSnapNotifications.length > 50) {
+        state.newSnapNotifications = state.newSnapNotifications.slice(0, 50);
+      }
+    },
+    clearSnapNotification(state, action: PayloadAction<string>) {
+      state.newSnapNotifications = state.newSnapNotifications.filter(
+        (notification) => notification.snapId !== action.payload,
+      );
+    },
+    clearAllSnapNotifications(state) {
+      state.newSnapNotifications = [];
+    },
     setError(state, action: PayloadAction<string | null>) {
       state.error = action.payload;
     },
@@ -97,6 +134,9 @@ export const {
   addNewMessageNotification,
   clearMessageNotification,
   clearAllMessageNotifications,
+  addNewSnapNotification,
+  clearSnapNotification,
+  clearAllSnapNotifications,
   setError,
 } = realtimeSlice.actions;
 

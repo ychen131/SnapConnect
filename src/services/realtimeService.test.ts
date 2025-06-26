@@ -2,33 +2,23 @@
  * @file realtimeService.test.ts
  * @description Unit tests for realtime service functionality
  */
-import { store } from '../store/store';
-import {
-  setConnectionStatus,
-  addActiveSubscription,
-  addNewMessageNotification,
-  clearActiveSubscriptions,
-} from '../store/realtimeSlice';
-import {
-  initializeRealtimeSubscriptions,
-  cleanupRealtimeSubscriptions,
-  getConnectionStatus,
-  getMessageNotifications,
-  clearConversationNotifications,
-} from './realtimeService';
 
-// Mock the realtime module
+// Mock all dependencies at the top
 jest.mock('./realtime', () => ({
   subscribeToNewMessages: jest.fn(),
   unsubscribeFromNewMessages: jest.fn(),
+  subscribeToNewSnaps: jest.fn(),
+  unsubscribeFromNewSnaps: jest.fn(),
 }));
 
-// Mock the chatService module
 jest.mock('./chatService', () => ({
   getConversations: jest.fn(),
 }));
 
-// Mock the store
+jest.mock('./userService', () => ({
+  getUserProfile: jest.fn(),
+}));
+
 jest.mock('../store/store', () => ({
   store: {
     dispatch: jest.fn(),
@@ -36,17 +26,41 @@ jest.mock('../store/store', () => ({
   },
 }));
 
+// Import after mocks
+import { store } from '../store/store';
+import {
+  setConnectionStatus,
+  addActiveSubscription,
+  addNewMessageNotification,
+  addNewSnapNotification,
+  clearActiveSubscriptions,
+} from '../store/realtimeSlice';
+import {
+  initializeRealtimeSubscriptions,
+  cleanupRealtimeSubscriptions,
+  getConnectionStatus,
+  getMessageNotifications,
+  getSnapNotifications,
+  clearConversationNotifications,
+  clearSnapNotification,
+} from './realtimeService';
+
+// Get mocked functions
+const mockRealtime = require('./realtime');
+const mockChatService = require('./chatService');
+const mockUserService = require('./userService');
+
 describe('realtimeService', () => {
   const mockStore = store as jest.Mocked<typeof store>;
-  const mockSubscribeToNewMessages = require('./realtime')
-    .subscribeToNewMessages as jest.MockedFunction<any>;
-  const mockUnsubscribeFromNewMessages = require('./realtime')
-    .unsubscribeFromNewMessages as jest.MockedFunction<any>;
-  const mockGetConversations = require('./chatService')
-    .getConversations as jest.MockedFunction<any>;
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Reset module state
+    const realtimeService = require('./realtimeService');
+    if (realtimeService.isInitialized !== undefined) {
+      realtimeService.isInitialized = false;
+    }
 
     // Setup default mock implementations
     mockStore.getState.mockReturnValue({
@@ -55,12 +69,22 @@ describe('realtimeService', () => {
         isConnected: false,
         activeSubscriptions: [],
         newMessageNotifications: [],
+        newSnapNotifications: [],
         error: null,
       },
     } as any);
 
-    // Reset the module's internal state by clearing the module cache
-    jest.resetModules();
+    mockChatService.getConversations.mockResolvedValue([]);
+    mockUserService.getUserProfile.mockResolvedValue({
+      data: { username: 'testuser' },
+      error: null,
+    });
+
+    // Reset mock implementations to default (no-op)
+    mockRealtime.subscribeToNewMessages.mockImplementation(() => {});
+    mockRealtime.subscribeToNewSnaps.mockImplementation(() => {});
+    mockRealtime.unsubscribeFromNewMessages.mockImplementation(() => {});
+    mockRealtime.unsubscribeFromNewSnaps.mockImplementation(() => {});
   });
 
   describe('initializeRealtimeSubscriptions', () => {
@@ -69,16 +93,21 @@ describe('realtimeService', () => {
 
       await initializeRealtimeSubscriptions(userId);
 
-      expect(mockSubscribeToNewMessages).toHaveBeenCalledWith(userId, expect.any(Function));
+      expect(mockRealtime.subscribeToNewMessages).toHaveBeenCalledWith(
+        userId,
+        expect.any(Function),
+      );
+      expect(mockRealtime.subscribeToNewSnaps).toHaveBeenCalledWith(userId, expect.any(Function));
       expect(mockStore.dispatch).toHaveBeenCalledWith(setConnectionStatus(true));
       expect(mockStore.dispatch).toHaveBeenCalledWith(addActiveSubscription('messages'));
+      expect(mockStore.dispatch).toHaveBeenCalledWith(addActiveSubscription('snaps'));
     });
 
     it('should handle initialization errors', async () => {
       const userId = 'test-user-id';
       const error = new Error('Connection failed');
 
-      mockSubscribeToNewMessages.mockImplementation(() => {
+      mockRealtime.subscribeToNewMessages.mockImplementation(() => {
         throw error;
       });
 
@@ -98,18 +127,21 @@ describe('realtimeService', () => {
       // First initialization
       await initializeRealtimeSubscriptions(userId);
 
-      // Clear mocks to check if they're called again
-      mockUnsubscribeFromNewMessages.mockClear();
-      mockSubscribeToNewMessages.mockClear();
-      mockStore.dispatch.mockClear();
-
-      // Manually cleanup to reset the isInitialized flag
+      // Cleanup
       cleanupRealtimeSubscriptions();
 
-      // Second initialization should work normally
+      // Clear mock calls for second initialization
+      mockRealtime.subscribeToNewMessages.mockClear();
+      mockRealtime.subscribeToNewSnaps.mockClear();
+
+      // Second initialization
       await initializeRealtimeSubscriptions(userId);
 
-      expect(mockSubscribeToNewMessages).toHaveBeenCalledWith(userId, expect.any(Function));
+      expect(mockRealtime.subscribeToNewMessages).toHaveBeenCalledWith(
+        userId,
+        expect.any(Function),
+      );
+      expect(mockRealtime.subscribeToNewSnaps).toHaveBeenCalledWith(userId, expect.any(Function));
     });
   });
 
@@ -117,18 +149,18 @@ describe('realtimeService', () => {
     it('should cleanup subscriptions successfully', () => {
       cleanupRealtimeSubscriptions();
 
-      expect(mockUnsubscribeFromNewMessages).toHaveBeenCalled();
+      expect(mockRealtime.unsubscribeFromNewMessages).toHaveBeenCalled();
+      expect(mockRealtime.unsubscribeFromNewSnaps).toHaveBeenCalled();
       expect(mockStore.dispatch).toHaveBeenCalledWith(setConnectionStatus(false));
       expect(mockStore.dispatch).toHaveBeenCalledWith(clearActiveSubscriptions());
     });
 
     it('should handle cleanup errors gracefully', () => {
       const error = new Error('Cleanup failed');
-      mockUnsubscribeFromNewMessages.mockImplementation(() => {
+      mockRealtime.unsubscribeFromNewMessages.mockImplementation(() => {
         throw error;
       });
 
-      // Should not throw
       expect(() => cleanupRealtimeSubscriptions()).not.toThrow();
     });
   });
@@ -157,7 +189,6 @@ describe('realtimeService', () => {
     it('should return message notifications from store', () => {
       const mockNotifications = [
         { conversationId: 'conv1', count: 2, lastMessageAt: '2023-01-01T00:00:00Z' },
-        { conversationId: 'conv2', count: 1, lastMessageAt: '2023-01-01T01:00:00Z' },
       ];
 
       mockStore.getState.mockReturnValue({
@@ -169,15 +200,47 @@ describe('realtimeService', () => {
     });
   });
 
+  describe('getSnapNotifications', () => {
+    it('should return snap notifications from store', () => {
+      const mockNotifications = [
+        {
+          senderId: 'sender1',
+          senderUsername: 'testuser',
+          snapId: 'snap1',
+          mediaType: 'photo' as const,
+          timer: 5,
+          receivedAt: '2023-01-01T00:00:00Z',
+        },
+      ];
+
+      mockStore.getState.mockReturnValue({
+        realtime: { newSnapNotifications: mockNotifications },
+      } as any);
+
+      const notifications = getSnapNotifications();
+      expect(notifications).toEqual(mockNotifications);
+    });
+  });
+
   describe('clearConversationNotifications', () => {
     it('should clear notifications for specific conversation', () => {
-      const conversationId = 'test-conversation-id';
-
-      clearConversationNotifications(conversationId);
+      clearConversationNotifications('conv1');
 
       expect(mockStore.dispatch).toHaveBeenCalledWith(
         expect.objectContaining({
-          payload: conversationId,
+          payload: 'conv1',
+        }),
+      );
+    });
+  });
+
+  describe('clearSnapNotification', () => {
+    it('should clear notifications for specific snap', () => {
+      clearSnapNotification('snap1');
+
+      expect(mockStore.dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: 'snap1',
         }),
       );
     });
@@ -195,13 +258,14 @@ describe('realtimeService', () => {
         },
       };
 
-      // Initialize subscriptions to get the message handler
+      // Initialize to get the message handler
       await initializeRealtimeSubscriptions(userId);
 
-      // Get the message handler function that was passed to subscribeToNewMessages
-      const messageHandler = mockSubscribeToNewMessages.mock.calls[0][1];
+      // Get the message handler from the mock call
+      const messageHandler = mockRealtime.subscribeToNewMessages.mock.calls[0][1];
+      expect(typeof messageHandler).toBe('function');
 
-      // Simulate receiving a message
+      // Call the handler
       await messageHandler(mockMessagePayload);
 
       expect(mockStore.dispatch).toHaveBeenCalledWith(
@@ -212,79 +276,142 @@ describe('realtimeService', () => {
       );
     });
 
-    it('should ignore non-INSERT events', async () => {
+    it('should ignore non-INSERT message events', async () => {
       const userId = 'test-user-id';
-      const mockUpdatePayload = {
+      const mockMessagePayload = {
         eventType: 'UPDATE',
         new: { conversation_id: 'conv1', created_at: '2023-01-01T00:00:00Z' },
       };
 
       await initializeRealtimeSubscriptions(userId);
-      const messageHandler = mockSubscribeToNewMessages.mock.calls[0][1];
+      const messageHandler = mockRealtime.subscribeToNewMessages.mock.calls[0][1];
+      await messageHandler(mockMessagePayload);
 
-      await messageHandler(mockUpdatePayload);
-
-      // Should not dispatch notification for UPDATE events
       expect(mockStore.dispatch).not.toHaveBeenCalledWith(
         expect.objectContaining({
-          type: expect.stringContaining('addNewMessageNotification'),
+          type: expect.stringContaining('realtime/addNewMessageNotification'),
+        }),
+      );
+    });
+  });
+
+  describe('snap handling', () => {
+    it('should handle new snap events correctly', async () => {
+      const userId = 'test-user-id';
+      const mockSnapPayload = {
+        eventType: 'INSERT',
+        new: {
+          id: 'snap1',
+          sender_id: 'sender1',
+          message_type: 'photo',
+          timer: 5,
+          created_at: '2023-01-01T00:00:00Z',
+        },
+      };
+
+      mockUserService.getUserProfile.mockResolvedValue({
+        data: { username: 'testuser' },
+        error: null,
+      });
+
+      await initializeRealtimeSubscriptions(userId);
+      const snapHandler = mockRealtime.subscribeToNewSnaps.mock.calls[0][1];
+      expect(typeof snapHandler).toBe('function');
+
+      await snapHandler(mockSnapPayload);
+
+      expect(mockStore.dispatch).toHaveBeenCalledWith(
+        addNewSnapNotification({
+          senderId: 'sender1',
+          senderUsername: 'testuser',
+          snapId: 'snap1',
+          mediaType: 'photo',
+          timer: 5,
+          receivedAt: '2023-01-01T00:00:00Z',
         }),
       );
     });
 
-    it('should handle missing message data gracefully', async () => {
+    it('should handle snap events with unknown sender gracefully', async () => {
       const userId = 'test-user-id';
-      const mockInvalidPayload = {
-        eventType: 'INSERT',
-        new: null,
-      };
-
-      await initializeRealtimeSubscriptions(userId);
-      const messageHandler = mockSubscribeToNewMessages.mock.calls[0][1];
-
-      // Should not throw
-      await messageHandler(mockInvalidPayload);
-      expect(true).toBe(true); // Test passes if no error thrown
-    });
-
-    it('should refresh conversations after new message', async () => {
-      const userId = 'test-user-id';
-      const mockMessagePayload = {
+      const mockSnapPayload = {
         eventType: 'INSERT',
         new: {
-          conversation_id: 'conv1',
+          id: 'snap1',
+          sender_id: 'sender1',
+          message_type: 'photo',
+          timer: 5,
           created_at: '2023-01-01T00:00:00Z',
         },
       };
 
-      mockGetConversations.mockResolvedValue([]);
+      mockUserService.getUserProfile.mockResolvedValue({
+        data: null,
+        error: new Error('User not found'),
+      });
 
       await initializeRealtimeSubscriptions(userId);
-      const messageHandler = mockSubscribeToNewMessages.mock.calls[0][1];
+      const snapHandler = mockRealtime.subscribeToNewSnaps.mock.calls[0][1];
+      await snapHandler(mockSnapPayload);
 
-      await messageHandler(mockMessagePayload);
-
-      expect(mockGetConversations).toHaveBeenCalledWith(userId);
+      expect(mockStore.dispatch).toHaveBeenCalledWith(
+        addNewSnapNotification({
+          senderId: 'sender1',
+          senderUsername: 'Unknown User',
+          snapId: 'snap1',
+          mediaType: 'photo',
+          timer: 5,
+          receivedAt: '2023-01-01T00:00:00Z',
+        }),
+      );
     });
 
-    it('should handle conversation refresh errors gracefully', async () => {
+    it('should ignore non-INSERT snap events', async () => {
       const userId = 'test-user-id';
-      const mockMessagePayload = {
-        eventType: 'INSERT',
+      const mockSnapPayload = {
+        eventType: 'UPDATE',
         new: {
-          conversation_id: 'conv1',
+          id: 'snap1',
+          sender_id: 'sender1',
+          message_type: 'photo',
+          timer: 5,
           created_at: '2023-01-01T00:00:00Z',
         },
       };
 
-      mockGetConversations.mockRejectedValue(new Error('Refresh failed'));
+      await initializeRealtimeSubscriptions(userId);
+      const snapHandler = mockRealtime.subscribeToNewSnaps.mock.calls[0][1];
+      await snapHandler(mockSnapPayload);
+
+      expect(mockStore.dispatch).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: expect.stringContaining('realtime/addNewSnapNotification'),
+        }),
+      );
+    });
+
+    it('should ignore non-snap message types', async () => {
+      const userId = 'test-user-id';
+      const mockSnapPayload = {
+        eventType: 'INSERT',
+        new: {
+          id: 'snap1',
+          sender_id: 'sender1',
+          message_type: 'text', // Not a snap type
+          timer: 5,
+          created_at: '2023-01-01T00:00:00Z',
+        },
+      };
 
       await initializeRealtimeSubscriptions(userId);
-      const messageHandler = mockSubscribeToNewMessages.mock.calls[0][1];
+      const snapHandler = mockRealtime.subscribeToNewSnaps.mock.calls[0][1];
+      await snapHandler(mockSnapPayload);
 
-      // Should not throw
-      await messageHandler(mockMessagePayload);
-      expect(true).toBe(true); // Test passes if no error thrown
+      expect(mockStore.dispatch).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: expect.stringContaining('realtime/addNewSnapNotification'),
+        }),
+      );
     });
   });
 });

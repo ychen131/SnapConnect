@@ -9,10 +9,17 @@ import {
   removeActiveSubscription,
   clearActiveSubscriptions,
   addNewMessageNotification,
+  addNewSnapNotification,
   setError,
 } from '../store/realtimeSlice';
-import { subscribeToNewMessages, unsubscribeFromNewMessages } from './realtime';
+import {
+  subscribeToNewMessages,
+  unsubscribeFromNewMessages,
+  subscribeToNewSnaps,
+  unsubscribeFromNewSnaps,
+} from './realtime';
 import { getConversations } from './chatService';
+import { getUserProfile } from './userService';
 
 let isInitialized = false;
 
@@ -34,9 +41,15 @@ export async function initializeRealtimeSubscriptions(userId: string): Promise<v
       handleNewMessage(payload);
     });
 
+    // Subscribe to new snaps
+    subscribeToNewSnaps(userId, (payload) => {
+      handleNewSnap(payload);
+    });
+
     // Update Redux state
     store.dispatch(setConnectionStatus(true));
     store.dispatch(addActiveSubscription('messages'));
+    store.dispatch(addActiveSubscription('snaps'));
     store.dispatch(setError(null));
 
     isInitialized = true;
@@ -57,6 +70,7 @@ export function cleanupRealtimeSubscriptions(): void {
 
     // Unsubscribe from all channels
     unsubscribeFromNewMessages();
+    unsubscribeFromNewSnaps();
 
     // Update Redux state
     store.dispatch(setConnectionStatus(false));
@@ -110,6 +124,58 @@ async function handleNewMessage(payload: any): Promise<void> {
 }
 
 /**
+ * Handle new snap events from realtime subscriptions.
+ * @param payload The snap payload from Supabase
+ */
+async function handleNewSnap(payload: any): Promise<void> {
+  try {
+    console.log('📸 New snap received:', payload);
+
+    if (payload.eventType !== 'INSERT') {
+      return;
+    }
+
+    const newSnap = payload.new;
+    if (!newSnap) {
+      console.warn('⚠️ No snap data in payload');
+      return;
+    }
+
+    // Only handle photo/video messages (snaps)
+    if (newSnap.message_type !== 'photo' && newSnap.message_type !== 'video') {
+      return;
+    }
+
+    // Get sender username for notification
+    let senderUsername = 'Unknown User';
+    try {
+      const { data: sender } = await getUserProfile(newSnap.sender_id);
+      if (sender) {
+        senderUsername = sender.username || 'Unknown User';
+      }
+    } catch (error) {
+      console.error('Error fetching sender username:', error);
+    }
+
+    // Add snap notification to Redux state
+    store.dispatch(
+      addNewSnapNotification({
+        senderId: newSnap.sender_id,
+        senderUsername,
+        snapId: newSnap.id,
+        mediaType: newSnap.message_type as 'photo' | 'video',
+        timer: newSnap.timer,
+        receivedAt: newSnap.created_at,
+      }),
+    );
+
+    console.log('✅ Snap notification added for:', senderUsername);
+  } catch (error) {
+    console.error('❌ Error handling new snap:', error);
+  }
+}
+
+/**
  * Get the current realtime connection status.
  * @returns boolean indicating if connected
  */
@@ -128,9 +194,26 @@ export function getMessageNotifications() {
 }
 
 /**
+ * Get new snap notifications.
+ * @returns Array of snap notifications
+ */
+export function getSnapNotifications() {
+  const state = store.getState();
+  return state.realtime.newSnapNotifications;
+}
+
+/**
  * Clear notifications for a specific conversation.
  * @param conversationId The conversation ID
  */
 export function clearConversationNotifications(conversationId: string): void {
   store.dispatch(removeActiveSubscription(conversationId));
+}
+
+/**
+ * Clear a specific snap notification.
+ * @param snapId The snap ID
+ */
+export function clearSnapNotification(snapId: string): void {
+  store.dispatch(removeActiveSubscription(snapId));
 }
