@@ -2,34 +2,56 @@
  * @file storyService.test.ts
  * @description Tests for story service functionality including CRUD operations and edge cases.
  */
-import { addToStory, getUserStories, deleteStory, updateStoryPrivacy, Story } from './storyService';
+import {
+  addToStory,
+  getUserStories,
+  deleteStory,
+  updateStoryPrivacy,
+  Story,
+  getPublicStories,
+} from './storyService';
 
-// Mock Supabase client
+// Enhanced Supabase mock to support full method chains
+const mockSingle = jest.fn();
+const mockSelect = jest.fn(() => ({
+  eq: jest.fn(() => ({
+    neq: jest.fn(() => ({
+      order: jest.fn(() => ({
+        gt: jest.fn(),
+      })),
+    })),
+    order: jest.fn(() => ({
+      gt: jest.fn(),
+    })),
+  })),
+  order: jest.fn(() => ({
+    gt: jest.fn(),
+  })),
+  gt: jest.fn(),
+}));
+const mockInsert = jest.fn(() => ({
+  select: jest.fn(() => ({
+    single: mockSingle,
+  })),
+}));
+const mockUpdate = jest.fn(() => ({
+  eq: jest.fn(() => ({
+    eq: jest.fn(),
+  })),
+}));
+const mockDelete = jest.fn(() => ({
+  eq: jest.fn(() => ({
+    eq: jest.fn(),
+  })),
+}));
+
 jest.mock('./supabase', () => ({
   supabase: {
     from: jest.fn(() => ({
-      insert: jest.fn(() => ({
-        select: jest.fn(() => ({
-          single: jest.fn(),
-        })),
-      })),
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          order: jest.fn(() => ({
-            gt: jest.fn(),
-          })),
-        })),
-      })),
-      update: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          eq: jest.fn(),
-        })),
-      })),
-      delete: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          eq: jest.fn(),
-        })),
-      })),
+      insert: mockInsert,
+      select: mockSelect,
+      update: mockUpdate,
+      delete: mockDelete,
     })),
     rpc: jest.fn(),
   },
@@ -130,18 +152,13 @@ describe('Story Service', () => {
   describe('getUserStories', () => {
     it('should fetch user stories successfully', async () => {
       const mockSupabase = require('./supabase').supabase;
-      mockSupabase
-        .from()
-        .select()
-        .eq()
-        .order()
-        .gt.mockResolvedValue({
-          data: [mockStory],
-          error: null,
-        });
-
+      // Create a fresh mock chain for this test
+      const mockGt = jest.fn(() => Promise.resolve({ data: [mockStory], error: null }));
+      const mockOrder = jest.fn(() => ({ gt: mockGt }));
+      const mockEq = jest.fn(() => ({ order: mockOrder }));
+      const mockSelect = jest.fn(() => ({ eq: mockEq }));
+      mockSupabase.from.mockReturnValue({ select: mockSelect });
       const result = await getUserStories(mockUserId);
-
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual(mockStory);
     });
@@ -162,17 +179,41 @@ describe('Story Service', () => {
 
       expect(result).toEqual([]);
     });
+
+    it('should not return expired stories by default', async () => {
+      const mockSupabase = require('./supabase').supabase;
+      const expiredStory = { ...mockStory, expires_at: new Date(Date.now() - 1000).toISOString() };
+      mockSupabase.from().select().eq().order().gt.mockResolvedValue({
+        data: [],
+        error: null,
+      });
+      const result = await getUserStories(mockUserId);
+      expect(result).toEqual([]);
+    });
+
+    it('should return expired stories if includeExpired=true', async () => {
+      const mockSupabase = require('./supabase').supabase;
+      const expiredStory = { ...mockStory, expires_at: new Date(Date.now() - 1000).toISOString() };
+      // Create a fresh mock chain for this test
+      const mockGt = jest.fn(() => Promise.resolve({ data: [expiredStory], error: null }));
+      const mockOrder = jest.fn(() => ({ gt: mockGt }));
+      const mockEq = jest.fn(() => ({ order: mockOrder }));
+      const mockSelect = jest.fn(() => ({ eq: mockEq }));
+      mockSupabase.from.mockReturnValue({ select: mockSelect });
+      const result = await getUserStories(mockUserId, true);
+      expect(result[0].expires_at).toBe(expiredStory.expires_at);
+    });
   });
 
   describe('deleteStory', () => {
     it('should delete story successfully', async () => {
       const mockSupabase = require('./supabase').supabase;
-      mockSupabase.from().delete().eq().eq.mockResolvedValue({
-        error: null,
-      });
-
+      // Create a fresh mock chain for this test
+      const mockEq2 = jest.fn(() => Promise.resolve({ error: null }));
+      const mockEq1 = jest.fn(() => ({ eq: mockEq2 }));
+      const mockDelete = jest.fn(() => ({ eq: mockEq1 }));
+      mockSupabase.from.mockReturnValue({ delete: mockDelete });
       const result = await deleteStory('story-id', mockUserId);
-
       expect(result).toBe(true);
     });
 
@@ -195,12 +236,12 @@ describe('Story Service', () => {
   describe('updateStoryPrivacy', () => {
     it('should update privacy successfully', async () => {
       const mockSupabase = require('./supabase').supabase;
-      mockSupabase.from().update().eq().eq.mockResolvedValue({
-        error: null,
-      });
-
+      // Create a fresh mock chain for this test
+      const mockEq2 = jest.fn(() => Promise.resolve({ error: null }));
+      const mockEq1 = jest.fn(() => ({ eq: mockEq2 }));
+      const mockUpdate = jest.fn(() => ({ eq: mockEq1 }));
+      mockSupabase.from.mockReturnValue({ update: mockUpdate });
       const result = await updateStoryPrivacy('story-id', mockUserId, false);
-
       expect(result).toBe(true);
     });
 
@@ -217,6 +258,18 @@ describe('Story Service', () => {
       const result = await updateStoryPrivacy('story-id', mockUserId, true);
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('getPublicStories', () => {
+    it('should not return expired public stories by default', async () => {
+      const mockSupabase = require('./supabase').supabase;
+      mockSupabase.from().select().eq().neq().order().gt.mockResolvedValue({
+        data: [],
+        error: null,
+      });
+      const result = await getPublicStories(mockUserId);
+      expect(result).toEqual([]);
     });
   });
 });
