@@ -6,6 +6,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import counterReducer from './counterSlice';
 import authReducer from './authSlice';
+import realtimeReducer from './realtimeSlice';
 
 /**
  * The main Redux store for the app.
@@ -14,6 +15,7 @@ export const store = configureStore({
   reducer: {
     counter: counterReducer,
     auth: authReducer,
+    realtime: realtimeReducer,
   },
   // devTools: process.env.NODE_ENV !== 'production', // Uncomment to customize
 });

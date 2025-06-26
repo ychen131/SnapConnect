@@ -14,6 +14,11 @@ import {
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { getConversations, Conversation } from '../../services/chatService';
+import {
+  initializeRealtimeSubscriptions,
+  cleanupRealtimeSubscriptions,
+  getConnectionStatus,
+} from '../../services/realtimeService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
@@ -24,6 +29,7 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const user = useSelector((state: RootState) => state.auth.user);
+  const realtimeState = useSelector((state: RootState) => state.realtime);
 
   /**
    * Fetches conversations from the database
@@ -86,6 +92,11 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
       return item.other_user_username.charAt(0).toUpperCase();
     };
 
+    // Check for realtime notifications for this conversation
+    const notification = realtimeState.newMessageNotifications.find(
+      (n) => n.conversationId === item.id,
+    );
+
     return (
       <TouchableOpacity
         onPress={() => handleConversationPress(item)}
@@ -119,11 +130,13 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
               {getLastMessagePreview()}
             </Text>
 
-            {/* Unread Badge */}
-            {item.unread_count > 0 && (
+            {/* Unread Badge - combine database count with realtime notifications */}
+            {(item.unread_count > 0 || (notification && notification.count > 0)) && (
               <View className="ml-2 h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500">
                 <Text className="text-xs font-semibold text-white">
-                  {item.unread_count > 99 ? '99+' : item.unread_count}
+                  {Math.min(item.unread_count + (notification?.count || 0), 99) > 99
+                    ? '99+'
+                    : item.unread_count + (notification?.count || 0)}
                 </Text>
               </View>
             )}
@@ -147,6 +160,38 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
     );
   }
 
+  /**
+   * Renders realtime connection status indicator
+   */
+  function renderConnectionStatus() {
+    if (!realtimeState.isConnected) {
+      return (
+        <View className="bg-yellow-100 px-4 py-2">
+          <Text className="text-center text-sm text-yellow-800">
+            🔌 Connecting to real-time updates...
+          </Text>
+        </View>
+      );
+    }
+    return null;
+  }
+
+  // Initialize realtime subscriptions on mount
+  useEffect(() => {
+    if (user?.id) {
+      console.log('🚀 Initializing realtime subscriptions in ChatScreen');
+      initializeRealtimeSubscriptions(user.id).catch((error) => {
+        console.error('❌ Failed to initialize realtime subscriptions:', error);
+      });
+    }
+
+    // Cleanup on unmount
+    return () => {
+      console.log('🧹 Cleaning up realtime subscriptions in ChatScreen');
+      cleanupRealtimeSubscriptions();
+    };
+  }, [user?.id]);
+
   // Load conversations on mount
   useEffect(() => {
     fetchConversations();
@@ -168,6 +213,7 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
         <View className="border-b border-gray-200 px-4 py-3">
           <Text className="text-xl font-bold text-gray-900">Chats</Text>
         </View>
+        {renderConnectionStatus()}
       </SafeAreaView>
 
       {/* Conversations List */}
