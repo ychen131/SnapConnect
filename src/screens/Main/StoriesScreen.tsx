@@ -6,8 +6,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
 import { RootState } from '../../store';
 import { getFriendsWithActiveStories, getUserStories } from '../../services/storyService';
+import { clearAllStoryNotifications } from '../../services/realtimeService';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { StoriesStackParamList } from '../../navigation/types';
@@ -58,56 +60,88 @@ function StoryAvatar({ id, username, avatarUrl, isOwn, hasStory, isNew, onPress,
 
 export default function StoriesScreen() {
   const user = useSelector((state: RootState) => state.auth.user);
+  const realtimeState = useSelector((state: RootState) => state.realtime);
   console.log('Redux user:', user);
+  console.log('🔴 StoriesScreen - realtimeState:', realtimeState);
+  console.log('🔴 StoriesScreen - newStoryNotifications:', realtimeState.newStoryNotifications);
+
   const [isLoading, setIsLoading] = useState(true);
   const [stories, setStories] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const navigation = useNavigation<NativeStackNavigationProp<StoriesStackParamList>>();
 
-  useEffect(() => {
-    async function fetchStories() {
-      if (!user?.id) return;
-      setIsLoading(true);
-      setError(null);
-      try {
-        const [friends, myStories] = await Promise.all([
-          getFriendsWithActiveStories(user.id),
-          getUserStories(user.id, false), // Only active stories
-        ]);
-        console.log('Fetched friends:', friends);
-        console.log('Fetched myStories:', myStories);
-        // Map to UI format
-        const hasMyStory = Array.isArray(myStories) && myStories.length > 0;
-        const storyList = [
-          {
-            id: 'me',
-            username: user.username,
-            avatarUrl: '',
-            isOwn: true,
-            hasStory: hasMyStory,
-          },
-          ...friends.map((f: any) => {
-            console.log('Mapping friend:', f);
-            return {
-              id: f.user_id,
-              username: f.username,
-              avatarUrl: f.avatar_url || '',
-              isOwn: false,
-              hasStory: true,
-              isNew: true,
-            };
-          }),
-        ];
-        setStories(storyList);
-      } catch (err) {
-        setError('Failed to load stories.');
-        Alert.alert('Error', 'Failed to load stories.');
-      } finally {
-        setIsLoading(false);
-      }
+  async function fetchStories() {
+    if (!user?.id) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [friends, myStories] = await Promise.all([
+        getFriendsWithActiveStories(user.id),
+        getUserStories(user.id, false), // Only active stories
+      ]);
+      console.log('Fetched friends:', friends);
+      console.log('Fetched myStories:', myStories);
+      // Map to UI format
+      const hasMyStory = Array.isArray(myStories) && myStories.length > 0;
+      const storyList = [
+        {
+          id: 'me',
+          username: user.username,
+          avatarUrl: '',
+          isOwn: true,
+          hasStory: hasMyStory,
+        },
+        ...friends.map((f: any) => {
+          console.log('Mapping friend:', f);
+          return {
+            id: f.user_id,
+            username: f.username,
+            avatarUrl: f.avatar_url || '',
+            isOwn: false,
+            hasStory: true,
+            isNew: true,
+          };
+        }),
+      ];
+      setStories(storyList);
+    } catch (err) {
+      setError('Failed to load stories.');
+      Alert.alert('Error', 'Failed to load stories.');
+    } finally {
+      setIsLoading(false);
     }
+  }
+
+  useEffect(() => {
     fetchStories();
   }, [user?.id]);
+
+  // Refresh stories when screen comes into focus (e.g., returning from story viewer)
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔄 StoriesScreen focused - refreshing stories');
+
+      // Clear story notifications when user intentionally views the stories list
+      if (realtimeState.newStoryNotifications.length > 0) {
+        console.log('🧹 Clearing story notifications - user focused on stories list');
+        console.log('🔴 Story notifications:', realtimeState.newStoryNotifications.length);
+        clearAllStoryNotifications();
+      }
+
+      // Refresh stories list
+      if (user?.id) {
+        fetchStories();
+      }
+    }, [user?.id]),
+  );
+
+  // Refresh stories when there are new story notifications
+  useEffect(() => {
+    if (realtimeState.newStoryNotifications.length > 0 && user?.id) {
+      console.log('🔄 New story notifications detected, refreshing stories list');
+      fetchStories();
+    }
+  }, [realtimeState.newStoryNotifications.length, user?.id]);
 
   // Build usersWithStories array for StoryViewer
   const usersWithStories = stories

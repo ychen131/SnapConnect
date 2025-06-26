@@ -7,6 +7,8 @@
 jest.mock('./realtime', () => ({
   subscribeToAllMessages: jest.fn(),
   unsubscribeFromAllMessages: jest.fn(),
+  subscribeToStories: jest.fn(),
+  unsubscribeFromStories: jest.fn(),
   // Legacy functions for backward compatibility
   subscribeToNewMessages: jest.fn(),
   unsubscribeFromNewMessages: jest.fn(),
@@ -86,6 +88,8 @@ describe('realtimeService', () => {
     // Reset mock implementations to default (no-op)
     mockRealtime.subscribeToAllMessages.mockImplementation(() => {});
     mockRealtime.unsubscribeFromAllMessages.mockImplementation(() => {});
+    mockRealtime.subscribeToStories.mockImplementation(() => {});
+    mockRealtime.unsubscribeFromStories.mockImplementation(() => {});
   });
 
   describe('initializeRealtimeSubscriptions', () => {
@@ -99,9 +103,15 @@ describe('realtimeService', () => {
         expect.any(Function), // message handler
         expect.any(Function), // snap handler
       );
+      expect(mockRealtime.subscribeToStories).toHaveBeenCalledWith(
+        userId,
+        expect.any(Function), // story handler
+        expect.any(Function), // story update handler
+      );
       expect(mockStore.dispatch).toHaveBeenCalledWith(setConnectionStatus(true));
       expect(mockStore.dispatch).toHaveBeenCalledWith(addActiveSubscription('messages'));
       expect(mockStore.dispatch).toHaveBeenCalledWith(addActiveSubscription('snaps'));
+      expect(mockStore.dispatch).toHaveBeenCalledWith(addActiveSubscription('stories'));
     });
 
     it('should handle initialization errors', async () => {
@@ -133,6 +143,7 @@ describe('realtimeService', () => {
 
       // Clear mock calls for second initialization
       mockRealtime.subscribeToAllMessages.mockClear();
+      mockRealtime.subscribeToStories.mockClear();
 
       // Second initialization
       await initializeRealtimeSubscriptions(userId);
@@ -142,6 +153,11 @@ describe('realtimeService', () => {
         expect.any(Function), // message handler
         expect.any(Function), // snap handler
       );
+      expect(mockRealtime.subscribeToStories).toHaveBeenCalledWith(
+        userId,
+        expect.any(Function), // story handler
+        expect.any(Function), // story update handler
+      );
     });
   });
 
@@ -150,6 +166,7 @@ describe('realtimeService', () => {
       cleanupRealtimeSubscriptions();
 
       expect(mockRealtime.unsubscribeFromAllMessages).toHaveBeenCalled();
+      expect(mockRealtime.unsubscribeFromStories).toHaveBeenCalled();
       expect(mockStore.dispatch).toHaveBeenCalledWith(setConnectionStatus(false));
       expect(mockStore.dispatch).toHaveBeenCalledWith(clearActiveSubscriptions());
     });

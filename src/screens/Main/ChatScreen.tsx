@@ -13,15 +13,13 @@ import {
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
-import { RootState } from '../../store';
-import { getConversations, Conversation } from '../../services/chatService';
-import {
-  initializeRealtimeSubscriptions,
-  cleanupRealtimeSubscriptions,
-  getConnectionStatus,
-  clearAllNotifications,
-} from '../../services/realtimeService';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import type { RootState } from '../../store';
+import { getConversations, type Conversation } from '../../services/chatService';
+import {
+  getMessageNotifications,
+  clearConversationNotifications,
+} from '../../services/realtimeService';
 
 /**
  * Displays a list of chat conversations for the current user
@@ -183,22 +181,6 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
     }
     return null;
   }
-
-  // Initialize realtime subscriptions on mount
-  useEffect(() => {
-    if (user?.id) {
-      console.log('🚀 Initializing realtime subscriptions in ChatScreen');
-      initializeRealtimeSubscriptions(user.id).catch((error) => {
-        console.error('❌ Failed to initialize realtime subscriptions:', error);
-      });
-    }
-
-    // Cleanup on unmount
-    return () => {
-      console.log('🧹 Cleaning up realtime subscriptions in ChatScreen');
-      cleanupRealtimeSubscriptions();
-    };
-  }, [user?.id]);
 
   // Load conversations on mount
   useEffect(() => {

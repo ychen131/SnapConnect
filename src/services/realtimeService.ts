@@ -10,15 +10,26 @@ import {
   clearActiveSubscriptions,
   addNewMessageNotification,
   addNewSnapNotification,
+  addNewStoryNotification,
   setError,
   clearSnapNotification as clearSnapNotificationAction,
   clearAllSnapNotifications as clearAllSnapNotificationsAction,
   clearAllMessageNotifications as clearAllMessageNotificationsAction,
   clearMessageNotification as clearMessageNotificationAction,
+  clearStoryNotification as clearStoryNotificationAction,
+  clearAllStoryNotifications as clearAllStoryNotificationsAction,
 } from '../store/realtimeSlice';
-import { subscribeToAllMessages, unsubscribeFromAllMessages } from './realtime';
+import {
+  subscribeToAllMessages,
+  unsubscribeFromAllMessages,
+  subscribeToStories,
+  unsubscribeFromStories,
+} from './realtime';
 import { getConversations } from './chatService';
 import { getUserProfile } from './userService';
+import { getFriendsWithActiveStories } from './storyService';
+import { getFriendsList } from './friendService';
+import { supabase } from './supabase';
 
 let isInitialized = false;
 
@@ -46,10 +57,22 @@ export async function initializeRealtimeSubscriptions(userId: string): Promise<v
       },
     );
 
+    // Subscribe to story updates
+    subscribeToStories(
+      userId,
+      (payload) => {
+        handleNewStory(payload);
+      },
+      (payload) => {
+        handleStoryUpdate(payload);
+      },
+    );
+
     // Update Redux state
     store.dispatch(setConnectionStatus(true));
     store.dispatch(addActiveSubscription('messages'));
     store.dispatch(addActiveSubscription('snaps'));
+    store.dispatch(addActiveSubscription('stories'));
     store.dispatch(setError(null));
 
     isInitialized = true;
@@ -70,6 +93,7 @@ export function cleanupRealtimeSubscriptions(): void {
 
     // Unsubscribe from all channels
     unsubscribeFromAllMessages();
+    unsubscribeFromStories();
 
     // Update Redux state
     store.dispatch(setConnectionStatus(false));
@@ -185,6 +209,117 @@ async function handleNewSnap(payload: any): Promise<void> {
 }
 
 /**
+ * Handle new story events from realtime subscriptions.
+ * @param payload The story payload from Supabase
+ */
+async function handleNewStory(payload: any): Promise<void> {
+  try {
+    console.log('�� New story received via realtime:', payload);
+
+    if (payload.eventType !== 'INSERT') {
+      console.log('📖 Not an INSERT event, skipping');
+      return;
+    }
+
+    const newStory = payload.new;
+    if (!newStory) {
+      console.warn('⚠️ No story data in payload');
+      return;
+    }
+
+    console.log('📖 Processing story from user:', newStory.user_id);
+
+    // Get story creator username for notification
+    let username = 'Unknown User';
+    try {
+      const { data: creator } = await getUserProfile(newStory.user_id);
+      if (creator) {
+        username = creator.username || 'Unknown User';
+      }
+    } catch (error) {
+      console.error('Error fetching story creator username:', error);
+    }
+
+    // Check if the story creator is a friend before adding notification
+    const state = store.getState();
+    const currentUserId = state.auth.user?.id;
+    if (!currentUserId) {
+      console.warn('⚠️ No current user ID available');
+      return;
+    }
+
+    console.log('📖 Checking if story creator is a friend...');
+
+    try {
+      // Get friends list to check if story creator is a friend
+      const friends = await getFriendsList(currentUserId);
+      const isFriend = friends.some((friend: any) => friend.id === newStory.user_id);
+
+      console.log(
+        '📖 Friends list:',
+        friends.map((f: any) => f.id),
+      );
+      console.log('📖 Story creator ID:', newStory.user_id);
+      console.log('📖 Is friend?', isFriend);
+
+      if (!isFriend) {
+        console.log('📖 Story creator is not a friend, skipping notification:', username);
+        return;
+      }
+
+      console.log('📖 Story creator is a friend, adding notification:', username);
+    } catch (error) {
+      console.error('Error checking friend relationship:', error);
+      // If we can't check friend relationship, don't add notification to be safe
+      return;
+    }
+
+    // Add story notification to Redux state
+    store.dispatch(
+      addNewStoryNotification({
+        storyId: newStory.id,
+        userId: newStory.user_id,
+        username,
+        mediaType: newStory.media_type as 'photo' | 'video',
+        receivedAt: newStory.created_at,
+      }),
+    );
+
+    console.log('✅ Story notification added for:', username);
+    console.log(
+      '🔴 Current story notifications count:',
+      store.getState().realtime.newStoryNotifications.length,
+    );
+  } catch (error) {
+    console.error('❌ Error handling new story:', error);
+  }
+}
+
+/**
+ * Handle story update events from realtime subscriptions.
+ * @param payload The story update payload from Supabase
+ */
+async function handleStoryUpdate(payload: any): Promise<void> {
+  try {
+    console.log('📖 Story update received:', payload);
+
+    // Handle story updates (expiration, deletion, etc.)
+    // For now, we'll just log the update
+    // In the future, we could refresh the stories list or handle specific updates
+
+    const state = store.getState();
+    const currentUserId = state.auth.user?.id;
+    if (currentUserId) {
+      // Optionally refresh stories list in background
+      // This could be optimized to only refresh when needed
+      console.log('🔄 Story update detected, stories list may need refresh');
+    }
+  } catch (error) {
+    console.error('❌ Error handling story update:', error);
+  }
+}
+
+/**
  * Get the current realtime connection status.
  * @returns boolean indicating if connected
  */
@@ -209,6 +344,15 @@ export function getMessageNotifications() {
 export function getSnapNotifications() {
   const state = store.getState();
   return state.realtime.newSnapNotifications;
+}
+
+/**
+ * Get new story notifications.
+ * @returns Array of story notifications
+ */
+export function getStoryNotifications() {
+  const state = store.getState();
+  return state.realtime.newStoryNotifications;
 }
 
 /**
@@ -246,6 +390,19 @@ export function clearSnapNotification(snapId: string): void {
 }
 
 /**
+ * Clear a specific story notification.
+ * @param storyId The story ID
+ */
+export function clearStoryNotification(storyId: string): void {
+  console.log('🧹 Clearing story notification for storyId:', storyId);
+  store.dispatch(clearStoryNotificationAction(storyId));
+  console.log(
+    '🔴 Remaining story notifications count:',
+    store.getState().realtime.newStoryNotifications.length,
+  );
+}
+
+/**
  * Clear all snap notifications.
  */
 export function clearAllSnapNotifications(): void {
@@ -270,17 +427,32 @@ export function clearAllMessageNotifications(): void {
 }
 
 /**
- * Clear all notifications (both snaps and messages).
+ * Clear all story notifications.
+ */
+export function clearAllStoryNotifications(): void {
+  console.log('🧹 Clearing all story notifications');
+  store.dispatch(clearAllStoryNotificationsAction());
+  console.log(
+    '🔴 Story notifications count after clearing all:',
+    store.getState().realtime.newStoryNotifications.length,
+  );
+}
+
+/**
+ * Clear all notifications (snaps, messages, and stories).
  */
 export function clearAllNotifications(): void {
-  console.log('🧹 Clearing all notifications (snaps and messages)');
+  console.log('🧹 Clearing all notifications (snaps, messages, and stories)');
   store.dispatch(clearAllSnapNotificationsAction());
   store.dispatch(clearAllMessageNotificationsAction());
+  store.dispatch(clearAllStoryNotificationsAction());
   console.log(
     '🔴 Notifications count after clearing all:',
     'Snaps:',
     store.getState().realtime.newSnapNotifications.length,
     'Messages:',
     store.getState().realtime.newMessageNotifications.length,
+    'Stories:',
+    store.getState().realtime.newStoryNotifications.length,
   );
 }

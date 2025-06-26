@@ -6,7 +6,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store';
-import { clearAllNotifications } from '../services/realtimeService';
+import { clearAllNotifications, clearAllStoryNotifications } from '../services/realtimeService';
 import { Badge } from './ui/Badge';
 
 /**
@@ -53,10 +53,15 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
 
   const shouldShowRedDot = hasUnreadMessages();
 
+  // Check for story notifications
+  const hasUnreadStories = realtimeState.newStoryNotifications.length > 0;
+
   // Debug logging
   console.log('🔴 CustomTabBar - unreadSnaps:', unreadSnaps);
   console.log('🔴 CustomTabBar - newMessageNotifications:', realtimeState.newMessageNotifications);
+  console.log('🔴 CustomTabBar - newStoryNotifications:', realtimeState.newStoryNotifications);
   console.log('🔴 CustomTabBar - shouldShowRedDot:', shouldShowRedDot);
+  console.log('🔴 CustomTabBar - hasUnreadStories:', hasUnreadStories);
 
   return (
     <View
@@ -88,6 +93,13 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
               console.log('🧹 Clearing all notifications - Chat tab pressed');
               clearAllNotifications();
             }
+
+            // Clear story notifications when Stories tab is pressed
+            if (route.name === 'Stories' && hasUnreadStories) {
+              console.log('🧹 Clearing story notifications - Stories tab pressed');
+              clearAllStoryNotifications();
+            }
+
             navigation.navigate(route.name);
           }
         };
@@ -127,6 +139,11 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
               {/* Show red dot badge on Chat tab when there are unread messages */}
               {route.name === 'Chat' && (
                 <Badge visible={shouldShowRedDot} size={8} color="#EF4444" />
+              )}
+
+              {/* Show red dot badge on Stories tab when there are unread stories */}
+              {route.name === 'Stories' && (
+                <Badge visible={hasUnreadStories} size={8} color="#EF4444" />
               )}
             </View>
 

@@ -2,10 +2,16 @@
  * @file MainNavigator.tsx
  * @description Main app navigator with bottom tabs for Camera, Chat, Stories, Profile.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../store';
+import {
+  initializeRealtimeSubscriptions,
+  cleanupRealtimeSubscriptions,
+} from '../services/realtimeService';
 import CameraScreen from '../screens/Main/CameraScreen';
 import SendToScreen from '../screens/Main/SendToScreen';
 import ChatScreen from '../screens/Main/ChatScreen';
@@ -89,6 +95,23 @@ function StoriesStackNavigator() {
  */
 export default function MainNavigator() {
   const Tab = createBottomTabNavigator<MainTabParamList>();
+  const user = useSelector((state: RootState) => state.auth.user);
+
+  // Initialize realtime subscriptions when user is authenticated
+  useEffect(() => {
+    if (user?.id) {
+      console.log('🚀 Initializing realtime subscriptions in MainNavigator for user:', user.id);
+      initializeRealtimeSubscriptions(user.id).catch((error) => {
+        console.error('❌ Failed to initialize realtime subscriptions:', error);
+      });
+    }
+
+    // Cleanup on unmount
+    return () => {
+      console.log('🧹 Cleaning up realtime subscriptions in MainNavigator');
+      cleanupRealtimeSubscriptions();
+    };
+  }, [user?.id]);
 
   return (
     <Tab.Navigator

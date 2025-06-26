@@ -1,10 +1,11 @@
 /**
  * @file realtime.ts
- * @description Service for managing Supabase Realtime subscriptions (chat messages, snaps, etc).
+ * @description Service for managing Supabase Realtime subscriptions (chat messages, snaps, stories, etc).
  */
 import { supabase } from './supabase';
 
 let messageChannel: any = null;
+let storyChannel: any = null;
 
 /**
  * Subscribe to all new messages (text, photo, video) for the current user.
@@ -54,6 +55,68 @@ export function subscribeToAllMessages(
 }
 
 /**
+ * Subscribe to story updates for the current user and their friends.
+ * @param userId The current user's ID
+ * @param onNewStory Callback for new story events
+ * @param onStoryUpdate Callback for story update events (expiration, deletion, etc.)
+ */
+export function subscribeToStories(
+  userId: string,
+  onNewStory: (payload: any) => void,
+  onStoryUpdate: (payload: any) => void,
+) {
+  if (storyChannel) {
+    console.log('📖 Unsubscribing from existing story channel');
+    storyChannel.unsubscribe();
+    storyChannel = null;
+  }
+
+  console.log('📖 Setting up story subscription for user:', userId);
+  console.log('📖 Supabase client:', supabase);
+
+  storyChannel = supabase
+    .channel('stories-realtime')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'stories',
+        filter: `is_public=eq.true`,
+      },
+      (payload: any) => {
+        // Only handle stories from other users (not the current user)
+        if (payload.new?.user_id !== userId) {
+          onNewStory(payload);
+        }
+      },
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'stories',
+      },
+      (payload: any) => {
+        onStoryUpdate(payload);
+      },
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'stories',
+      },
+      (payload: any) => {
+        onStoryUpdate(payload);
+      },
+    )
+    .subscribe();
+}
+
+/**
  * Unsubscribe from all message realtime events.
  */
 export function unsubscribeFromAllMessages() {
@@ -61,6 +124,17 @@ export function unsubscribeFromAllMessages() {
     messageChannel.unsubscribe();
     messageChannel = null;
     console.log('🛑 Unsubscribed from all messages');
+  }
+}
+
+/**
+ * Unsubscribe from all story realtime events.
+ */
+export function unsubscribeFromStories() {
+  if (storyChannel) {
+    storyChannel.unsubscribe();
+    storyChannel = null;
+    console.log('🛑 Unsubscribed from all stories');
   }
 }
 

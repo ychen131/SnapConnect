@@ -1,6 +1,6 @@
 /**
  * @file realtimeSlice.ts
- * @description Redux slice for managing realtime subscription state and message/snap notifications.
+ * @description Redux slice for managing realtime subscription state and message/snap/story notifications.
  */
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
@@ -23,6 +23,13 @@ export interface RealtimeState {
     timer?: number;
     receivedAt: string;
   }[];
+  newStoryNotifications: {
+    storyId: string;
+    userId: string;
+    username: string;
+    mediaType: 'photo' | 'video';
+    receivedAt: string;
+  }[];
   error: string | null;
 }
 
@@ -31,6 +38,7 @@ const initialState: RealtimeState = {
   activeSubscriptions: [],
   newMessageNotifications: [],
   newSnapNotifications: [],
+  newStoryNotifications: [],
   error: null,
 };
 
@@ -47,6 +55,7 @@ const realtimeSlice = createSlice({
         // Clear notifications when disconnected
         state.newMessageNotifications = [];
         state.newSnapNotifications = [];
+        state.newStoryNotifications = [];
       }
     },
     addActiveSubscription(state, action: PayloadAction<string>) {
@@ -121,6 +130,32 @@ const realtimeSlice = createSlice({
     clearAllSnapNotifications(state) {
       state.newSnapNotifications = [];
     },
+    addNewStoryNotification(
+      state,
+      action: PayloadAction<{
+        storyId: string;
+        userId: string;
+        username: string;
+        mediaType: 'photo' | 'video';
+        receivedAt: string;
+      }>,
+    ) {
+      // Add new story notification to the beginning of the array
+      state.newStoryNotifications.unshift(action.payload);
+
+      // Keep only the last 20 story notifications to prevent memory issues
+      if (state.newStoryNotifications.length > 20) {
+        state.newStoryNotifications = state.newStoryNotifications.slice(0, 20);
+      }
+    },
+    clearStoryNotification(state, action: PayloadAction<string>) {
+      state.newStoryNotifications = state.newStoryNotifications.filter(
+        (notification) => notification.storyId !== action.payload,
+      );
+    },
+    clearAllStoryNotifications(state) {
+      state.newStoryNotifications = [];
+    },
     setError(state, action: PayloadAction<string | null>) {
       state.error = action.payload;
     },
@@ -138,6 +173,9 @@ export const {
   addNewSnapNotification,
   clearSnapNotification,
   clearAllSnapNotifications,
+  addNewStoryNotification,
+  clearStoryNotification,
+  clearAllStoryNotifications,
   setError,
 } = realtimeSlice.actions;
 
@@ -150,4 +188,13 @@ export default realtimeSlice.reducer;
  */
 export function selectUnreadSnapCount(state: { realtime: RealtimeState }): number {
   return state.realtime.newSnapNotifications.length;
+}
+
+/**
+ * Selector to get the count of unread story notifications.
+ * @param state The root Redux state
+ * @returns The number of unread story notifications
+ */
+export function selectUnreadStoryCount(state: { realtime: RealtimeState }): number {
+  return state.realtime.newStoryNotifications.length;
 }

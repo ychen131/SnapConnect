@@ -18,8 +18,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { getUserStories } from '../../services/storyService';
+import { clearStoryNotification } from '../../services/realtimeService';
 
 type StoryViewerRouteParams = {
+  id?: string;
   userId: string;
   username?: string;
   avatarUrl?: string;
@@ -52,7 +54,9 @@ export default function StoryViewerScreen() {
   // State for current user and stories
   const [currentUserIndex, setCurrentUserIndex] = useState(userIndex || 0);
   const [currentUser, setCurrentUser] = useState(
-    usersWithStories ? usersWithStories[userIndex || 0] : { userId, username, avatarUrl },
+    usersWithStories
+      ? usersWithStories[userIndex || 0]
+      : { id: userId, userId, username, avatarUrl },
   );
   const [currentUserStories, setCurrentUserStories] = useState<Story[]>([]);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
@@ -63,12 +67,22 @@ export default function StoryViewerScreen() {
       setIsLoading(true);
       setError(null);
       try {
-        const userStories = await getUserStories(currentUser.id || currentUser.userId, false);
+        const userIdToFetch = currentUser.id || currentUser.userId;
+        if (!userIdToFetch) {
+          throw new Error('No user ID available');
+        }
+
+        const userStories = await getUserStories(userIdToFetch, false);
         const sortedStories = userStories
           .slice()
           .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         setCurrentUserStories(sortedStories);
         setCurrentStoryIndex(0);
+
+        // Clear story notifications for this user's stories
+        userStories.forEach((story) => {
+          clearStoryNotification(story.id);
+        });
       } catch (err) {
         setError('Failed to load stories.');
         Alert.alert('Error', 'Failed to load stories.');
