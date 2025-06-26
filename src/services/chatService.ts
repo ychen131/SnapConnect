@@ -56,8 +56,6 @@ export interface Message {
  */
 export async function getConversations(userId: string): Promise<Conversation[]> {
   try {
-    console.log('🔍 Getting conversations for user:', userId);
-
     const { data, error } = await supabase
       .from('conversations')
       .select('*')
@@ -65,17 +63,13 @@ export async function getConversations(userId: string): Promise<Conversation[]> 
       .order('last_message_at', { ascending: false });
 
     if (error) {
-      console.error('❌ Error fetching conversations:', error);
       return [];
     }
-
-    console.log('📋 Raw conversations data:', data);
 
     // Transform the data to include computed fields
     const conversations: Conversation[] = await Promise.all(
       (data || []).map(async (conv) => {
         const otherUserId = conv.user1_id === userId ? conv.user2_id : conv.user1_id;
-        console.log('👤 Processing conversation with other user:', otherUserId);
 
         // Get other user's profile info
         const { data: profileData } = await supabase
@@ -111,15 +105,12 @@ export async function getConversations(userId: string): Promise<Conversation[]> 
           unread_count: unreadCount || 0,
         };
 
-        console.log('✅ Processed conversation:', conversation);
         return conversation;
       }),
     );
 
-    console.log('🎉 Final conversations result:', conversations);
     return conversations;
   } catch (error) {
-    console.error('❌ Error fetching conversations:', error);
     return [];
   }
 }
@@ -144,7 +135,6 @@ export async function getMessages(conversationId: string, userId: string): Promi
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('Error fetching messages:', error);
       return [];
     }
 
@@ -186,7 +176,6 @@ export async function getMessages(conversationId: string, userId: string): Promi
 
     return messages;
   } catch (error) {
-    console.error('Error fetching messages:', error);
     return [];
   }
 }
@@ -213,13 +202,11 @@ export async function markMessagesAsViewed(
       .eq('is_viewed', false);
 
     if (error) {
-      console.error('Error marking messages as viewed:', error);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('Error marking messages as viewed:', error);
     return false;
   }
 }
@@ -239,13 +226,11 @@ export async function getOrCreateConversation(user1Id: string, user2Id: string):
     });
 
     if (error) {
-      console.error('Error getting or creating conversation:', error);
       throw error;
     }
 
     return data;
   } catch (error) {
-    console.error('Error getting or creating conversation:', error);
     throw error;
   }
 }
@@ -267,14 +252,6 @@ export async function sendTextReply(
   replyToMessageId: string,
 ): Promise<boolean> {
   try {
-    console.log('💬 Sending text reply:', {
-      conversationId,
-      senderId,
-      recipientId,
-      replyText,
-      replyToMessageId,
-    });
-
     // Verify the original message exists and is in the same conversation
     const { data: originalMessage, error: fetchError } = await supabase
       .from('messages')
@@ -284,7 +261,6 @@ export async function sendTextReply(
       .single();
 
     if (fetchError || !originalMessage) {
-      console.error('❌ Original message not found or not in conversation:', fetchError);
       throw new Error('Original message not found');
     }
 
@@ -300,14 +276,11 @@ export async function sendTextReply(
     });
 
     if (insertError) {
-      console.error('❌ Error creating reply message:', insertError);
       throw insertError;
     }
 
-    console.log('✅ Text reply sent successfully');
     return true;
   } catch (error) {
-    console.error('❌ Error sending text reply:', error);
     throw error;
   }
 }

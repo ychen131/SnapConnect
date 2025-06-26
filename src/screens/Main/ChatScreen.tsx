@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { RootState } from '../../store';
@@ -19,7 +19,9 @@ import { getConversations, type Conversation } from '../../services/chatService'
 import {
   getMessageNotifications,
   clearConversationNotifications,
+  clearAllMessageNotifications,
 } from '../../services/realtimeService';
+import { clearAllMessageNotifications as clearAllMessageNotificationsSlice } from '../../store/realtimeSlice';
 
 /**
  * Displays a list of chat conversations for the current user
@@ -30,6 +32,7 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const user = useSelector((state: RootState) => state.auth.user);
   const realtimeState = useSelector((state: RootState) => state.realtime);
+  const dispatch = useDispatch();
 
   // Debug logging for Redux state
   console.log('🔴 ChatScreen - realtimeState:', realtimeState);
@@ -196,6 +199,17 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
       // This prevents premature clearing when notifications are added while user is on ChatScreen
     }, [user?.id]),
   );
+
+  // After fetching conversations, clear notifications if all are read
+  useEffect(() => {
+    if (
+      conversations.length > 0 &&
+      conversations.every((conv) => conv.unread_count === 0) &&
+      realtimeState.newMessageNotifications.length === 0
+    ) {
+      dispatch(clearAllMessageNotificationsSlice());
+    }
+  }, [conversations, realtimeState.newMessageNotifications.length]);
 
   if (isLoading) {
     return (

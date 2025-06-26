@@ -33,23 +33,16 @@ export function subscribeToAllMessages(
         filter: `recipient_id=eq.${userId}`,
       },
       (payload: any) => {
-        console.log('📨 New message received via realtime:', payload);
-
         // Route based on message_type
         if (payload.new?.message_type === 'text') {
-          console.log('📝 Routing to text message handler');
           onNewMessage(payload);
         } else if (payload.new?.message_type === 'photo' || payload.new?.message_type === 'video') {
-          console.log('📸 Routing to snap handler');
           onNewSnap(payload);
-        } else {
-          console.log('❓ Unknown message type:', payload.new?.message_type);
         }
       },
     )
     .subscribe((status: any) => {
       if (status === 'SUBSCRIBED') {
-        console.log('✅ Subscribed to all messages for user', userId);
       }
     });
 }
@@ -66,13 +59,9 @@ export function subscribeToStories(
   onStoryUpdate: (payload: any) => void,
 ) {
   if (storyChannel) {
-    console.log('📖 Unsubscribing from existing story channel');
     storyChannel.unsubscribe();
     storyChannel = null;
   }
-
-  console.log('📖 Setting up story subscription for user:', userId);
-  console.log('📖 Supabase client:', supabase);
 
   storyChannel = supabase
     .channel('stories-realtime')
@@ -123,7 +112,6 @@ export function unsubscribeFromAllMessages() {
   if (messageChannel) {
     messageChannel.unsubscribe();
     messageChannel = null;
-    console.log('🛑 Unsubscribed from all messages');
   }
 }
 
@@ -134,7 +122,6 @@ export function unsubscribeFromStories() {
   if (storyChannel) {
     storyChannel.unsubscribe();
     storyChannel = null;
-    console.log('🛑 Unsubscribed from all stories');
   }
 }
 

@@ -30,24 +30,14 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
   const hasUnreadMessages = () => {
     // Check if there are any snap notifications
     if (unreadSnaps.length > 0) {
-      console.log('🔴 CustomTabBar: Has unread snaps, showing red dot');
       return true;
     }
 
     // Check if there are any message notifications
     if (realtimeState.newMessageNotifications.length > 0) {
-      console.log('🔴 CustomTabBar: Has message notifications, showing red dot');
-      console.log(
-        '🔴 CustomTabBar: Message notifications details:',
-        realtimeState.newMessageNotifications,
-      );
       return true;
     }
 
-    console.log('🔴 CustomTabBar: No unread messages, hiding red dot');
-    // Note: We can't directly access conversation unread counts from the database here
-    // because this component doesn't have access to the conversation data.
-    // The unread counts will be reflected in the realtime notifications.
     return false;
   };
 
@@ -55,13 +45,6 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
 
   // Check for story notifications
   const hasUnreadStories = realtimeState.newStoryNotifications.length > 0;
-
-  // Debug logging
-  console.log('🔴 CustomTabBar - unreadSnaps:', unreadSnaps);
-  console.log('🔴 CustomTabBar - newMessageNotifications:', realtimeState.newMessageNotifications);
-  console.log('🔴 CustomTabBar - newStoryNotifications:', realtimeState.newStoryNotifications);
-  console.log('🔴 CustomTabBar - shouldShowRedDot:', shouldShowRedDot);
-  console.log('🔴 CustomTabBar - hasUnreadStories:', hasUnreadStories);
 
   return (
     <View
@@ -90,13 +73,11 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
           if (!isFocused && !event.defaultPrevented) {
             // Clear all notifications when Chat tab is pressed
             if (route.name === 'Chat' && shouldShowRedDot) {
-              console.log('🧹 Clearing all notifications - Chat tab pressed');
               clearAllNotifications();
             }
 
             // Clear story notifications when Stories tab is pressed
             if (route.name === 'Stories' && hasUnreadStories) {
-              console.log('🧹 Clearing story notifications - Stories tab pressed');
               clearAllStoryNotifications();
             }
 
