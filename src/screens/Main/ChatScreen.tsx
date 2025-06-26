@@ -210,17 +210,8 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
     React.useCallback(() => {
       console.log('🔄 ChatScreen focused - refreshing conversations');
       fetchConversations();
-
-      // Clear all notifications when user intentionally views the chat list
-      const hasSnapNotifications = realtimeState.newSnapNotifications.length > 0;
-      const hasMessageNotifications = realtimeState.newMessageNotifications.length > 0;
-
-      if (hasSnapNotifications || hasMessageNotifications) {
-        console.log('🧹 Clearing all notifications - user focused on chat list');
-        console.log('🔴 Snap notifications:', realtimeState.newSnapNotifications.length);
-        console.log('🔴 Message notifications:', realtimeState.newMessageNotifications.length);
-        clearAllNotifications();
-      }
+      // Note: Notifications are cleared when user presses the Chat tab in CustomTabBar
+      // This prevents premature clearing when notifications are added while user is on ChatScreen
     }, [user?.id]),
   );
 

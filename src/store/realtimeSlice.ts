@@ -68,6 +68,7 @@ const realtimeSlice = createSlice({
       }>,
     ) {
       const { conversationId, messageAt } = action.payload;
+
       const existingIndex = state.newMessageNotifications.findIndex(
         (notification) => notification.conversationId === conversationId,
       );

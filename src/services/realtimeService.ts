@@ -108,6 +108,12 @@ async function handleNewMessage(payload: any): Promise<void> {
       }),
     );
 
+    console.log('✅ Message notification added for conversation:', newMessage.conversation_id);
+    console.log(
+      '🔴 Current message notifications count:',
+      store.getState().realtime.newMessageNotifications.length,
+    );
+
     // Optionally refresh conversations list
     const state = store.getState();
     const currentUserId = state.auth.user?.id;
