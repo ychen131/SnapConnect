@@ -300,3 +300,26 @@ export async function updateStoryPrivacy(
     return false;
   }
 }
+
+/**
+ * Fetches friends with at least one active (unexpired) story.
+ * @param userId The current user's ID
+ * @returns Promise<Array<{ user_id: string, username: string, avatar_url: string, latest_story: Story }>>
+ */
+export async function getFriendsWithActiveStories(userId: string) {
+  try {
+    // Join friendships and stories, filter for unexpired stories, group by friend
+    const { data, error } = await supabase.rpc('get_friends_with_active_stories', {
+      current_user_id: userId,
+    });
+    // The RPC should return: [{ user_id, username, avatar_url, latest_story: { ... } }]
+    if (error) {
+      console.error('Error fetching friends with active stories:', error);
+      return [];
+    }
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching friends with active stories:', error);
+    return [];
+  }
+}

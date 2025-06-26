@@ -48,6 +48,23 @@ export type ProfileStackParamList = {
   ProfileMain: undefined;
   AddFriends: undefined;
   MyStories: undefined;
+  StoryViewer: {
+    userId: string;
+    username?: string;
+    avatarUrl?: string;
+  };
+};
+
+/**
+ * Params for the stories stack navigator.
+ */
+export type StoriesStackParamList = {
+  StoriesMain: undefined;
+  StoryViewer: {
+    userId: string;
+    username?: string;
+    avatarUrl?: string;
+  };
 };
 
 /**
@@ -56,7 +73,7 @@ export type ProfileStackParamList = {
 export type MainTabParamList = {
   Camera: NavigatorScreenParams<CameraStackParamList>;
   Chat: NavigatorScreenParams<ChatStackParamList>;
-  Stories: undefined;
+  Stories: NavigatorScreenParams<StoriesStackParamList>;
   Profile: NavigatorScreenParams<ProfileStackParamList>;
 };
 

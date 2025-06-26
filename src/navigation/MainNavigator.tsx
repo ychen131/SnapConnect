@@ -16,6 +16,7 @@ import AddFriendsScreen from '../screens/Main/AddFriendsScreen';
 import MyStoriesScreen from '../screens/Main/MyStoriesScreen';
 import SnapPhotoViewer from '../screens/Main/SnapPhotoViewer';
 import SnapVideoViewer from '../screens/Main/SnapVideoViewer';
+import StoryViewerScreen from '../screens/Main/StoryViewerScreen';
 import type {
   MainTabParamList,
   CameraStackParamList,
@@ -64,6 +65,20 @@ function ProfileStackNavigator() {
       <Stack.Screen name="ProfileMain" component={ProfileScreen} />
       <Stack.Screen name="AddFriends" component={AddFriendsScreen} />
       <Stack.Screen name="MyStories" component={MyStoriesScreen} />
+      <Stack.Screen name="StoryViewer" component={StoryViewerScreen} />
+    </Stack.Navigator>
+  );
+}
+
+/**
+ * Stories stack navigator for stories feed and viewer
+ */
+function StoriesStackNavigator() {
+  const Stack = createNativeStackNavigator();
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="StoriesMain" component={StoriesScreen} />
+      <Stack.Screen name="StoryViewer" component={StoryViewerScreen} />
     </Stack.Navigator>
   );
 }
@@ -98,7 +113,7 @@ export default function MainNavigator() {
       />
       <Tab.Screen
         name="Stories"
-        component={StoriesScreen}
+        component={StoriesStackNavigator}
         options={{
           tabBarLabel: 'Stories',
           tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>📖</Text>,

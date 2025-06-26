@@ -22,6 +22,9 @@ import {
   updateStoryPrivacy,
   Story,
 } from '../../services/storyService';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { ProfileStackParamList } from '../../navigation/types';
 
 /**
  * Displays user's stories with management options
@@ -32,6 +35,7 @@ export default function MyStoriesScreen({ navigation }: { navigation: any }) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const user = useSelector((state: RootState) => state.auth.user);
+  const storiesNavigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
 
   useEffect(() => {
     if (user?.id) {
@@ -148,14 +152,24 @@ export default function MyStoriesScreen({ navigation }: { navigation: any }) {
     return (
       <View className="mb-4 rounded-lg bg-white p-4 shadow-sm">
         {/* Story Media */}
-        <View className="mb-3 overflow-hidden rounded-lg">
+        <TouchableOpacity
+          className="mb-3 overflow-hidden rounded-lg"
+          onPress={() => {
+            if (!user) return;
+            storiesNavigation.navigate('StoryViewer', {
+              userId: user.id,
+              username: user.username,
+              avatarUrl: (user as any).avatarUrl || '',
+            });
+          }}
+        >
           <Image source={{ uri: item.media_url }} className="h-48 w-full" resizeMode="cover" />
           {item.media_type === 'video' && (
             <View className="absolute right-2 top-2 rounded-full bg-black/50 p-1">
               <Text className="text-xs text-white">🎬</Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
 
         {/* Story Info */}
         <View className="mb-3 flex-row items-center justify-between">
