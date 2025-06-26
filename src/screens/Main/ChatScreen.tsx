@@ -34,28 +34,18 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
   const realtimeState = useSelector((state: RootState) => state.realtime);
   const dispatch = useDispatch();
 
-  // Debug logging for Redux state
-  console.log('🔴 ChatScreen - realtimeState:', realtimeState);
-  console.log('🔴 ChatScreen - newSnapNotifications:', realtimeState.newSnapNotifications);
-  console.log('🔴 ChatScreen - newMessageNotifications:', realtimeState.newMessageNotifications);
-
   /**
    * Fetches conversations from the database
    */
   async function fetchConversations() {
     if (!user?.id) {
-      console.log('❌ No user ID available for fetching conversations');
       return;
     }
 
-    console.log('🔍 Fetching conversations for user:', user.id);
     try {
       const data = await getConversations(user.id);
-      console.log('✅ Conversations fetched:', data.length, 'conversations');
-      console.log('📋 Conversations data:', data);
       setConversations(data);
     } catch (error) {
-      console.error('❌ Error fetching conversations:', error);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -74,7 +64,6 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
    * Handles tapping on a conversation
    */
   function handleConversationPress(conversation: Conversation) {
-    console.log('Opening conversation with:', conversation.other_user_username);
     navigation.navigate('IndividualChat', {
       conversationId: conversation.id,
       otherUserId: conversation.other_user_id,
@@ -193,7 +182,6 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
   // Refresh conversations when screen comes into focus (e.g., returning from a chat)
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🔄 ChatScreen focused - refreshing conversations');
       fetchConversations();
       // Note: Notifications are cleared when user presses the Chat tab in CustomTabBar
       // This prevents premature clearing when notifications are added while user is on ChatScreen

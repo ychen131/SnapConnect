@@ -42,7 +42,6 @@ export async function addToStory(
   try {
     // Validate inputs
     if (!userId || !mediaUrl || !mediaType) {
-      console.error('Invalid inputs for addToStory:', { userId, mediaUrl, mediaType });
       throw new Error('Invalid inputs: userId, mediaUrl, and mediaType are required');
     }
 
@@ -63,8 +62,6 @@ export async function addToStory(
       throw new Error('Invalid media URL: must be a valid HTTP URL');
     }
 
-    console.log('📖 Adding to story:', { userId, mediaUrl, mediaType, timer, isPublic });
-
     const { data, error } = await supabase
       .from('stories')
       .insert({
@@ -79,9 +76,6 @@ export async function addToStory(
       .single();
 
     if (error) {
-      console.error('Database error adding to story:', error);
-
-      // Provide specific error messages based on error type
       if (error.code === '23505') {
         // Unique constraint violation
         throw new Error('Story already exists with this content');
@@ -102,12 +96,8 @@ export async function addToStory(
       throw new Error('Failed to create story: No data returned');
     }
 
-    console.log('✅ Story added successfully:', data);
     return data;
   } catch (error) {
-    console.error('Error adding to story:', error);
-
-    // Re-throw with more specific error messages
     if (error instanceof Error) {
       throw error; // Already has specific message
     } else {
@@ -127,8 +117,6 @@ export async function getUserStories(
   includeExpired: boolean = false,
 ): Promise<Story[]> {
   try {
-    console.log('📖 Getting stories for user:', userId);
-
     let query = supabase
       .from('stories')
       .select(
@@ -147,7 +135,6 @@ export async function getUserStories(
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error getting user stories:', error);
       return [];
     }
 
@@ -158,10 +145,8 @@ export async function getUserStories(
       user_avatar_url: story.profiles?.avatar_url,
     }));
 
-    console.log(`Found ${stories.length} stories for user ${userId}`);
     return stories;
   } catch (error) {
-    console.error('Error getting user stories:', error);
     return [];
   }
 }
@@ -177,8 +162,6 @@ export async function getPublicStories(
   includeExpired: boolean = false,
 ): Promise<Story[]> {
   try {
-    console.log('📖 Getting public stories for user:', currentUserId);
-
     let query = supabase
       .from('stories')
       .select(
@@ -198,7 +181,6 @@ export async function getPublicStories(
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error getting public stories:', error);
       return [];
     }
 
@@ -209,10 +191,8 @@ export async function getPublicStories(
       user_avatar_url: story.profiles?.avatar_url,
     }));
 
-    console.log(`Found ${stories.length} public stories`);
     return stories;
   } catch (error) {
-    console.error('Error getting public stories:', error);
     return [];
   }
 }
@@ -229,15 +209,8 @@ export async function incrementStoryViewCount(storyId: string): Promise<boolean>
       .update({ view_count: supabase.rpc('increment', { row_id: storyId, x: 1 }) })
       .eq('id', storyId);
 
-    if (error) {
-      console.error('Error incrementing story view count:', error);
-      return false;
-    }
-
-    console.log('✅ Story view count incremented for:', storyId);
-    return true;
+    return error ? false : true;
   } catch (error) {
-    console.error('Error incrementing story view count:', error);
     return false;
   }
 }
@@ -256,15 +229,8 @@ export async function deleteStory(storyId: string, userId: string): Promise<bool
       .eq('id', storyId)
       .eq('user_id', userId); // Ensure user can only delete their own stories
 
-    if (error) {
-      console.error('Error deleting story:', error);
-      return false;
-    }
-
-    console.log('✅ Story deleted:', storyId);
-    return true;
+    return error ? false : true;
   } catch (error) {
-    console.error('Error deleting story:', error);
     return false;
   }
 }
@@ -288,15 +254,8 @@ export async function updateStoryPrivacy(
       .eq('id', storyId)
       .eq('user_id', userId); // Ensure user can only update their own stories
 
-    if (error) {
-      console.error('Error updating story privacy:', error);
-      return false;
-    }
-
-    console.log('✅ Story privacy updated:', { storyId, isPublic });
-    return true;
+    return error ? false : true;
   } catch (error) {
-    console.error('Error updating story privacy:', error);
     return false;
   }
 }
@@ -314,12 +273,10 @@ export async function getFriendsWithActiveStories(userId: string) {
     });
     // The RPC should return: [{ user_id, username, avatar_url, latest_story: { ... } }]
     if (error) {
-      console.error('Error fetching friends with active stories:', error);
       return [];
     }
     return data || [];
   } catch (error) {
-    console.error('Error fetching friends with active stories:', error);
     return [];
   }
 }

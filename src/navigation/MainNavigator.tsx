@@ -100,7 +100,6 @@ export default function MainNavigator() {
   // Initialize realtime subscriptions when user is authenticated
   useEffect(() => {
     if (user?.id) {
-      console.log('🚀 Initializing realtime subscriptions in MainNavigator for user:', user.id);
       initializeRealtimeSubscriptions(user.id).catch((error) => {
         console.error('❌ Failed to initialize realtime subscriptions:', error);
       });
@@ -108,7 +107,6 @@ export default function MainNavigator() {
 
     // Cleanup on unmount
     return () => {
-      console.log('🧹 Cleaning up realtime subscriptions in MainNavigator');
       cleanupRealtimeSubscriptions();
     };
   }, [user?.id]);

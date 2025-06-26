@@ -61,9 +61,6 @@ function StoryAvatar({ id, username, avatarUrl, isOwn, hasStory, isNew, onPress,
 export default function StoriesScreen() {
   const user = useSelector((state: RootState) => state.auth.user);
   const realtimeState = useSelector((state: RootState) => state.realtime);
-  console.log('Redux user:', user);
-  console.log('🔴 StoriesScreen - realtimeState:', realtimeState);
-  console.log('🔴 StoriesScreen - newStoryNotifications:', realtimeState.newStoryNotifications);
 
   const [isLoading, setIsLoading] = useState(true);
   const [stories, setStories] = useState<any[]>([]);
@@ -79,8 +76,6 @@ export default function StoriesScreen() {
         getFriendsWithActiveStories(user.id),
         getUserStories(user.id, false), // Only active stories
       ]);
-      console.log('Fetched friends:', friends);
-      console.log('Fetched myStories:', myStories);
       // Map to UI format
       const hasMyStory = Array.isArray(myStories) && myStories.length > 0;
       const storyList = [
@@ -92,7 +87,6 @@ export default function StoriesScreen() {
           hasStory: hasMyStory,
         },
         ...friends.map((f: any) => {
-          console.log('Mapping friend:', f);
           return {
             id: f.user_id,
             username: f.username,
@@ -119,12 +113,8 @@ export default function StoriesScreen() {
   // Refresh stories when screen comes into focus (e.g., returning from story viewer)
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🔄 StoriesScreen focused - refreshing stories');
-
       // Clear story notifications when user intentionally views the stories list
       if (realtimeState.newStoryNotifications.length > 0) {
-        console.log('🧹 Clearing story notifications - user focused on stories list');
-        console.log('🔴 Story notifications:', realtimeState.newStoryNotifications.length);
         clearAllStoryNotifications();
       }
 
@@ -138,7 +128,6 @@ export default function StoriesScreen() {
   // Refresh stories when there are new story notifications
   useEffect(() => {
     if (realtimeState.newStoryNotifications.length > 0 && user?.id) {
-      console.log('🔄 New story notifications detected, refreshing stories list');
       fetchStories();
     }
   }, [realtimeState.newStoryNotifications.length, user?.id]);
