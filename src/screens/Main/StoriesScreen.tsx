@@ -116,7 +116,7 @@ export default function StoriesScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <View className="border-b border-gray-200 px-4 py-3">
+      <View className="flex-row items-center border-b border-gray-200 px-4 py-3">
         <Text className="text-2xl font-bold">Stories</Text>
       </View>
       <View className="py-6">

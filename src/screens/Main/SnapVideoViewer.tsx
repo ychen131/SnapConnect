@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { markMessagesAsViewed } from '../../services/chatService';
 import { sendTextReply } from '../../services/chatService';
+import { clearSnapNotification, clearMessageNotification } from '../../services/realtimeService';
 import { supabase } from '../../services/supabase';
 import ReplyInputModal from '../../components/ui/ReplyInputModal';
 
@@ -43,11 +44,19 @@ export default function SnapVideoViewer({ navigation, route }: SnapVideoViewerPr
   console.log('🎬 SnapVideoViewer videoUrl:', videoUrl);
 
   useEffect(() => {
+    // Clear the snap notification when the video snap is viewed
+    clearSnapNotification(messageId);
+    console.log('✅ Cleared snap notification for message:', messageId);
+
+    // Also clear message notifications for this conversation since user is viewing it
+    clearMessageNotification(conversationId);
+    console.log('✅ Cleared message notifications for conversation:', conversationId);
+
     // Auto-play when component mounts
     if (videoRef.current) {
       videoRef.current.playAsync();
     }
-  }, []);
+  }, [messageId, conversationId]);
 
   /**
    * Handles video playback status updates

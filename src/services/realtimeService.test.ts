@@ -5,6 +5,9 @@
 
 // Mock all dependencies at the top
 jest.mock('./realtime', () => ({
+  subscribeToAllMessages: jest.fn(),
+  unsubscribeFromAllMessages: jest.fn(),
+  // Legacy functions for backward compatibility
   subscribeToNewMessages: jest.fn(),
   unsubscribeFromNewMessages: jest.fn(),
   subscribeToNewSnaps: jest.fn(),
@@ -81,10 +84,8 @@ describe('realtimeService', () => {
     });
 
     // Reset mock implementations to default (no-op)
-    mockRealtime.subscribeToNewMessages.mockImplementation(() => {});
-    mockRealtime.subscribeToNewSnaps.mockImplementation(() => {});
-    mockRealtime.unsubscribeFromNewMessages.mockImplementation(() => {});
-    mockRealtime.unsubscribeFromNewSnaps.mockImplementation(() => {});
+    mockRealtime.subscribeToAllMessages.mockImplementation(() => {});
+    mockRealtime.unsubscribeFromAllMessages.mockImplementation(() => {});
   });
 
   describe('initializeRealtimeSubscriptions', () => {
@@ -93,11 +94,11 @@ describe('realtimeService', () => {
 
       await initializeRealtimeSubscriptions(userId);
 
-      expect(mockRealtime.subscribeToNewMessages).toHaveBeenCalledWith(
+      expect(mockRealtime.subscribeToAllMessages).toHaveBeenCalledWith(
         userId,
-        expect.any(Function),
+        expect.any(Function), // message handler
+        expect.any(Function), // snap handler
       );
-      expect(mockRealtime.subscribeToNewSnaps).toHaveBeenCalledWith(userId, expect.any(Function));
       expect(mockStore.dispatch).toHaveBeenCalledWith(setConnectionStatus(true));
       expect(mockStore.dispatch).toHaveBeenCalledWith(addActiveSubscription('messages'));
       expect(mockStore.dispatch).toHaveBeenCalledWith(addActiveSubscription('snaps'));
@@ -107,7 +108,7 @@ describe('realtimeService', () => {
       const userId = 'test-user-id';
       const error = new Error('Connection failed');
 
-      mockRealtime.subscribeToNewMessages.mockImplementation(() => {
+      mockRealtime.subscribeToAllMessages.mockImplementation(() => {
         throw error;
       });
 
@@ -131,17 +132,16 @@ describe('realtimeService', () => {
       cleanupRealtimeSubscriptions();
 
       // Clear mock calls for second initialization
-      mockRealtime.subscribeToNewMessages.mockClear();
-      mockRealtime.subscribeToNewSnaps.mockClear();
+      mockRealtime.subscribeToAllMessages.mockClear();
 
       // Second initialization
       await initializeRealtimeSubscriptions(userId);
 
-      expect(mockRealtime.subscribeToNewMessages).toHaveBeenCalledWith(
+      expect(mockRealtime.subscribeToAllMessages).toHaveBeenCalledWith(
         userId,
-        expect.any(Function),
+        expect.any(Function), // message handler
+        expect.any(Function), // snap handler
       );
-      expect(mockRealtime.subscribeToNewSnaps).toHaveBeenCalledWith(userId, expect.any(Function));
     });
   });
 
@@ -149,15 +149,14 @@ describe('realtimeService', () => {
     it('should cleanup subscriptions successfully', () => {
       cleanupRealtimeSubscriptions();
 
-      expect(mockRealtime.unsubscribeFromNewMessages).toHaveBeenCalled();
-      expect(mockRealtime.unsubscribeFromNewSnaps).toHaveBeenCalled();
+      expect(mockRealtime.unsubscribeFromAllMessages).toHaveBeenCalled();
       expect(mockStore.dispatch).toHaveBeenCalledWith(setConnectionStatus(false));
       expect(mockStore.dispatch).toHaveBeenCalledWith(clearActiveSubscriptions());
     });
 
     it('should handle cleanup errors gracefully', () => {
       const error = new Error('Cleanup failed');
-      mockRealtime.unsubscribeFromNewMessages.mockImplementation(() => {
+      mockRealtime.unsubscribeFromAllMessages.mockImplementation(() => {
         throw error;
       });
 
@@ -262,7 +261,7 @@ describe('realtimeService', () => {
       await initializeRealtimeSubscriptions(userId);
 
       // Get the message handler from the mock call
-      const messageHandler = mockRealtime.subscribeToNewMessages.mock.calls[0][1];
+      const messageHandler = mockRealtime.subscribeToAllMessages.mock.calls[0][1];
       expect(typeof messageHandler).toBe('function');
 
       // Call the handler
@@ -284,7 +283,7 @@ describe('realtimeService', () => {
       };
 
       await initializeRealtimeSubscriptions(userId);
-      const messageHandler = mockRealtime.subscribeToNewMessages.mock.calls[0][1];
+      const messageHandler = mockRealtime.subscribeToAllMessages.mock.calls[0][1];
       await messageHandler(mockMessagePayload);
 
       expect(mockStore.dispatch).not.toHaveBeenCalledWith(
@@ -315,7 +314,7 @@ describe('realtimeService', () => {
       });
 
       await initializeRealtimeSubscriptions(userId);
-      const snapHandler = mockRealtime.subscribeToNewSnaps.mock.calls[0][1];
+      const snapHandler = mockRealtime.subscribeToAllMessages.mock.calls[0][2];
       expect(typeof snapHandler).toBe('function');
 
       await snapHandler(mockSnapPayload);
@@ -351,7 +350,7 @@ describe('realtimeService', () => {
       });
 
       await initializeRealtimeSubscriptions(userId);
-      const snapHandler = mockRealtime.subscribeToNewSnaps.mock.calls[0][1];
+      const snapHandler = mockRealtime.subscribeToAllMessages.mock.calls[0][2];
       await snapHandler(mockSnapPayload);
 
       expect(mockStore.dispatch).toHaveBeenCalledWith(
@@ -380,7 +379,7 @@ describe('realtimeService', () => {
       };
 
       await initializeRealtimeSubscriptions(userId);
-      const snapHandler = mockRealtime.subscribeToNewSnaps.mock.calls[0][1];
+      const snapHandler = mockRealtime.subscribeToAllMessages.mock.calls[0][2];
       await snapHandler(mockSnapPayload);
 
       expect(mockStore.dispatch).not.toHaveBeenCalledWith(
@@ -404,7 +403,7 @@ describe('realtimeService', () => {
       };
 
       await initializeRealtimeSubscriptions(userId);
-      const snapHandler = mockRealtime.subscribeToNewSnaps.mock.calls[0][1];
+      const snapHandler = mockRealtime.subscribeToAllMessages.mock.calls[0][2];
       await snapHandler(mockSnapPayload);
 
       expect(mockStore.dispatch).not.toHaveBeenCalledWith(

@@ -11,13 +11,12 @@ import {
   addNewMessageNotification,
   addNewSnapNotification,
   setError,
+  clearSnapNotification as clearSnapNotificationAction,
+  clearAllSnapNotifications as clearAllSnapNotificationsAction,
+  clearAllMessageNotifications as clearAllMessageNotificationsAction,
+  clearMessageNotification as clearMessageNotificationAction,
 } from '../store/realtimeSlice';
-import {
-  subscribeToNewMessages,
-  unsubscribeFromNewMessages,
-  subscribeToNewSnaps,
-  unsubscribeFromNewSnaps,
-} from './realtime';
+import { subscribeToAllMessages, unsubscribeFromAllMessages } from './realtime';
 import { getConversations } from './chatService';
 import { getUserProfile } from './userService';
 
@@ -36,15 +35,16 @@ export async function initializeRealtimeSubscriptions(userId: string): Promise<v
 
     console.log('🚀 Initializing realtime subscriptions for user:', userId);
 
-    // Subscribe to new messages
-    subscribeToNewMessages(userId, (payload) => {
-      handleNewMessage(payload);
-    });
-
-    // Subscribe to new snaps
-    subscribeToNewSnaps(userId, (payload) => {
-      handleNewSnap(payload);
-    });
+    // Subscribe to all messages (text, photo, video) using single channel
+    subscribeToAllMessages(
+      userId,
+      (payload) => {
+        handleNewMessage(payload);
+      },
+      (payload) => {
+        handleNewSnap(payload);
+      },
+    );
 
     // Update Redux state
     store.dispatch(setConnectionStatus(true));
@@ -69,8 +69,7 @@ export function cleanupRealtimeSubscriptions(): void {
     console.log('🧹 Cleaning up realtime subscriptions...');
 
     // Unsubscribe from all channels
-    unsubscribeFromNewMessages();
-    unsubscribeFromNewSnaps();
+    unsubscribeFromAllMessages();
 
     // Update Redux state
     store.dispatch(setConnectionStatus(false));
@@ -170,6 +169,10 @@ async function handleNewSnap(payload: any): Promise<void> {
     );
 
     console.log('✅ Snap notification added for:', senderUsername);
+    console.log(
+      '🔴 Current snap notifications count:',
+      store.getState().realtime.newSnapNotifications.length,
+    );
   } catch (error) {
     console.error('❌ Error handling new snap:', error);
   }
@@ -211,9 +214,67 @@ export function clearConversationNotifications(conversationId: string): void {
 }
 
 /**
+ * Clear message notifications for a specific conversation.
+ * @param conversationId The conversation ID
+ */
+export function clearMessageNotification(conversationId: string): void {
+  console.log('🧹 Clearing message notifications for conversation:', conversationId);
+  store.dispatch(clearMessageNotificationAction(conversationId));
+  console.log(
+    '🔴 Remaining message notifications count:',
+    store.getState().realtime.newMessageNotifications.length,
+  );
+}
+
+/**
  * Clear a specific snap notification.
  * @param snapId The snap ID
  */
 export function clearSnapNotification(snapId: string): void {
-  store.dispatch(removeActiveSubscription(snapId));
+  console.log('🧹 Clearing snap notification for snapId:', snapId);
+  store.dispatch(clearSnapNotificationAction(snapId));
+  console.log(
+    '🔴 Remaining snap notifications count:',
+    store.getState().realtime.newSnapNotifications.length,
+  );
+}
+
+/**
+ * Clear all snap notifications.
+ */
+export function clearAllSnapNotifications(): void {
+  console.log('🧹 Clearing all snap notifications');
+  store.dispatch(clearAllSnapNotificationsAction());
+  console.log(
+    '🔴 Snap notifications count after clearing all:',
+    store.getState().realtime.newSnapNotifications.length,
+  );
+}
+
+/**
+ * Clear all message notifications.
+ */
+export function clearAllMessageNotifications(): void {
+  console.log('🧹 Clearing all message notifications');
+  store.dispatch(clearAllMessageNotificationsAction());
+  console.log(
+    '🔴 Message notifications count after clearing all:',
+    store.getState().realtime.newMessageNotifications.length,
+  );
+}
+
+/**
+ * Clear all notifications (both snaps and messages).
+ */
+export function clearAllNotifications(): void {
+  console.log('🧹 Clearing all notifications (snaps and messages)');
+  store.dispatch(clearAllSnapNotificationsAction());
+  store.dispatch(clearAllMessageNotificationsAction());
+  console.log(
+    '🔴 Notifications count after clearing all:',
+    'Snaps:',
+    store.getState().realtime.newSnapNotifications.length,
+    'Messages:',
+    store.getState().realtime.newMessageNotifications.length,
+  );
 }

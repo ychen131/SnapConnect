@@ -141,3 +141,12 @@ export const {
 } = realtimeSlice.actions;
 
 export default realtimeSlice.reducer;
+
+/**
+ * Selector to get the count of unread snap notifications.
+ * @param state The root Redux state
+ * @returns The number of unread snap notifications
+ */
+export function selectUnreadSnapCount(state: { realtime: RealtimeState }): number {
+  return state.realtime.newSnapNotifications.length;
+}

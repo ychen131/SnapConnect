@@ -5,14 +5,18 @@
 import { supabase } from './supabase';
 
 let messageChannel: any = null;
-let snapChannel: any = null;
 
 /**
- * Subscribe to new chat messages for the current user.
+ * Subscribe to all new messages (text, photo, video) for the current user.
  * @param userId The current user's ID
- * @param onNewMessage Callback for new message events
+ * @param onNewMessage Callback for new text message events
+ * @param onNewSnap Callback for new snap events (photo/video)
  */
-export function subscribeToNewMessages(userId: string, onNewMessage: (payload: any) => void) {
+export function subscribeToAllMessages(
+  userId: string,
+  onNewMessage: (payload: any) => void,
+  onNewSnap: (payload: any) => void,
+) {
   if (messageChannel) {
     messageChannel.unsubscribe();
     messageChannel = null;
@@ -28,65 +32,77 @@ export function subscribeToNewMessages(userId: string, onNewMessage: (payload: a
         filter: `recipient_id=eq.${userId}`,
       },
       (payload: any) => {
-        onNewMessage(payload);
+        console.log('📨 New message received via realtime:', payload);
+
+        // Route based on message_type
+        if (payload.new?.message_type === 'text') {
+          console.log('📝 Routing to text message handler');
+          onNewMessage(payload);
+        } else if (payload.new?.message_type === 'photo' || payload.new?.message_type === 'video') {
+          console.log('📸 Routing to snap handler');
+          onNewSnap(payload);
+        } else {
+          console.log('❓ Unknown message type:', payload.new?.message_type);
+        }
       },
     )
     .subscribe((status: any) => {
       if (status === 'SUBSCRIBED') {
-        console.log('✅ Subscribed to new messages for user', userId);
+        console.log('✅ Subscribed to all messages for user', userId);
       }
     });
 }
 
 /**
- * Unsubscribe from chat message realtime events.
+ * Unsubscribe from all message realtime events.
  */
-export function unsubscribeFromNewMessages() {
+export function unsubscribeFromAllMessages() {
   if (messageChannel) {
     messageChannel.unsubscribe();
     messageChannel = null;
-    console.log('🛑 Unsubscribed from new messages');
+    console.log('🛑 Unsubscribed from all messages');
   }
+}
+
+// Legacy functions for backward compatibility
+/**
+ * Subscribe to new chat messages for the current user.
+ * @param userId The current user's ID
+ * @param onNewMessage Callback for new message events
+ * @deprecated Use subscribeToAllMessages instead
+ */
+export function subscribeToNewMessages(userId: string, onNewMessage: (payload: any) => void) {
+  console.warn('⚠️ subscribeToNewMessages is deprecated. Use subscribeToAllMessages instead.');
+  subscribeToAllMessages(userId, onNewMessage, () => {});
 }
 
 /**
  * Subscribe to new snap deliveries for the current user.
  * @param userId The current user's ID
  * @param onNewSnap Callback for new snap events
+ * @deprecated Use subscribeToAllMessages instead
  */
 export function subscribeToNewSnaps(userId: string, onNewSnap: (payload: any) => void) {
-  if (snapChannel) {
-    snapChannel.unsubscribe();
-    snapChannel = null;
-  }
-  snapChannel = supabase
-    .channel('snaps-realtime')
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `recipient_id=eq.${userId} AND message_type=in.(photo,video)`,
-      },
-      (payload: any) => {
-        onNewSnap(payload);
-      },
-    )
-    .subscribe((status: any) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('✅ Subscribed to new snaps for user', userId);
-      }
-    });
+  console.warn('⚠️ subscribeToNewSnaps is deprecated. Use subscribeToAllMessages instead.');
+  subscribeToAllMessages(userId, () => {}, onNewSnap);
+}
+
+/**
+ * Unsubscribe from chat message realtime events.
+ * @deprecated Use unsubscribeFromAllMessages instead
+ */
+export function unsubscribeFromNewMessages() {
+  console.warn(
+    '⚠️ unsubscribeFromNewMessages is deprecated. Use unsubscribeFromAllMessages instead.',
+  );
+  unsubscribeFromAllMessages();
 }
 
 /**
  * Unsubscribe from snap delivery realtime events.
+ * @deprecated Use unsubscribeFromAllMessages instead
  */
 export function unsubscribeFromNewSnaps() {
-  if (snapChannel) {
-    snapChannel.unsubscribe();
-    snapChannel = null;
-    console.log('🛑 Unsubscribed from new snaps');
-  }
+  console.warn('⚠️ unsubscribeFromNewSnaps is deprecated. Use unsubscribeFromAllMessages instead.');
+  unsubscribeFromAllMessages();
 }

@@ -17,6 +17,7 @@ import MyStoriesScreen from '../screens/Main/MyStoriesScreen';
 import SnapPhotoViewer from '../screens/Main/SnapPhotoViewer';
 import SnapVideoViewer from '../screens/Main/SnapVideoViewer';
 import StoryViewerScreen from '../screens/Main/StoryViewerScreen';
+import CustomTabBar from '../components/CustomTabBar';
 import type {
   MainTabParamList,
   CameraStackParamList,
@@ -94,6 +95,7 @@ export default function MainNavigator() {
       screenOptions={{
         headerShown: false,
       }}
+      tabBar={(props) => <CustomTabBar {...props} />}
     >
       <Tab.Screen
         name="Camera"

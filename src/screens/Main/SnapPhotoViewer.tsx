@@ -7,6 +7,7 @@ import { View, Image, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { markMessagesAsViewed } from '../../services/chatService';
 import { sendTextReply } from '../../services/chatService';
+import { clearSnapNotification, clearMessageNotification } from '../../services/realtimeService';
 import { supabase } from '../../services/supabase';
 import ReplyInputModal from '../../components/ui/ReplyInputModal';
 
@@ -35,6 +36,14 @@ export default function SnapPhotoViewer({ navigation, route }: SnapPhotoViewerPr
   console.log('🖼️ SnapPhotoViewer photoUrl:', photoUrl);
 
   useEffect(() => {
+    // Clear the snap notification when the snap is viewed
+    clearSnapNotification(messageId);
+    console.log('✅ Cleared snap notification for message:', messageId);
+
+    // Also clear message notifications for this conversation since user is viewing it
+    clearMessageNotification(conversationId);
+    console.log('✅ Cleared message notifications for conversation:', conversationId);
+
     // Start countdown
     if (secondsLeft <= 0) {
       handleClose();
@@ -44,7 +53,7 @@ export default function SnapPhotoViewer({ navigation, route }: SnapPhotoViewerPr
       setSecondsLeft((s) => s - 1);
     }, 1000);
     return () => clearInterval(interval);
-  }, [secondsLeft]);
+  }, [secondsLeft, messageId, conversationId]);
 
   async function handleClose() {
     // Mark as viewed

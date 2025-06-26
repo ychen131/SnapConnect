@@ -12,12 +12,14 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useSelector } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
 import { RootState } from '../../store';
 import { getConversations, Conversation } from '../../services/chatService';
 import {
   initializeRealtimeSubscriptions,
   cleanupRealtimeSubscriptions,
   getConnectionStatus,
+  clearAllNotifications,
 } from '../../services/realtimeService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -30,6 +32,11 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const user = useSelector((state: RootState) => state.auth.user);
   const realtimeState = useSelector((state: RootState) => state.realtime);
+
+  // Debug logging for Redux state
+  console.log('🔴 ChatScreen - realtimeState:', realtimeState);
+  console.log('🔴 ChatScreen - newSnapNotifications:', realtimeState.newSnapNotifications);
+  console.log('🔴 ChatScreen - newMessageNotifications:', realtimeState.newMessageNotifications);
 
   /**
    * Fetches conversations from the database
@@ -97,6 +104,9 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
       (n) => n.conversationId === item.id,
     );
 
+    const totalUnreadCount = item.unread_count + (notification?.count || 0);
+    const showBadge = totalUnreadCount > 0;
+
     return (
       <TouchableOpacity
         onPress={() => handleConversationPress(item)}
@@ -131,12 +141,10 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
             </Text>
 
             {/* Unread Badge - combine database count with realtime notifications */}
-            {(item.unread_count > 0 || (notification && notification.count > 0)) && (
+            {showBadge && (
               <View className="ml-2 h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500">
                 <Text className="text-xs font-semibold text-white">
-                  {Math.min(item.unread_count + (notification?.count || 0), 99) > 99
-                    ? '99+'
-                    : item.unread_count + (notification?.count || 0)}
+                  {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
                 </Text>
               </View>
             )}
@@ -196,6 +204,25 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
   useEffect(() => {
     fetchConversations();
   }, [user?.id]);
+
+  // Refresh conversations when screen comes into focus (e.g., returning from a chat)
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔄 ChatScreen focused - refreshing conversations');
+      fetchConversations();
+
+      // Clear all notifications when user intentionally views the chat list
+      const hasSnapNotifications = realtimeState.newSnapNotifications.length > 0;
+      const hasMessageNotifications = realtimeState.newMessageNotifications.length > 0;
+
+      if (hasSnapNotifications || hasMessageNotifications) {
+        console.log('🧹 Clearing all notifications - user focused on chat list');
+        console.log('🔴 Snap notifications:', realtimeState.newSnapNotifications.length);
+        console.log('🔴 Message notifications:', realtimeState.newMessageNotifications.length);
+        clearAllNotifications();
+      }
+    }, [user?.id]),
+  );
 
   if (isLoading) {
     return (
