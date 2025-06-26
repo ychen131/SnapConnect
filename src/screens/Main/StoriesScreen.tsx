@@ -109,6 +109,11 @@ export default function StoriesScreen() {
     fetchStories();
   }, [user?.id]);
 
+  // Build usersWithStories array for StoryViewer
+  const usersWithStories = stories
+    .map((s) => (s.isOwn ? { ...s, id: user?.id } : s))
+    .filter((s) => s.hasStory || s.isOwn);
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <View className="border-b border-gray-200 px-4 py-3">
@@ -131,25 +136,20 @@ export default function StoriesScreen() {
             data={stories}
             horizontal
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
+            renderItem={({ item, index }) => (
               <StoryAvatar
                 {...item}
                 onPress={() => {
                   if (!item.hasStory) return;
-                  if (item.id === 'me') {
-                    if (!user) return;
-                    navigation.navigate('StoryViewer', {
-                      userId: user.id,
-                      username: item.username,
-                      avatarUrl: item.avatarUrl,
-                    });
-                  } else {
-                    navigation.navigate('StoryViewer', {
-                      userId: item.id,
-                      username: item.username,
-                      avatarUrl: item.avatarUrl,
-                    });
-                  }
+                  const realId = item.isOwn ? user?.id : item.id;
+                  const userIndex = usersWithStories.findIndex((u) => u.id === realId);
+                  navigation.navigate('StoryViewer', {
+                    userId: realId,
+                    username: item.username,
+                    avatarUrl: item.avatarUrl,
+                    usersWithStories,
+                    userIndex,
+                  });
                 }}
               />
             )}

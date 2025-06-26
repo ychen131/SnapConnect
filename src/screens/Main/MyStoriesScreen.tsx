@@ -145,6 +145,17 @@ export default function MyStoriesScreen({ navigation }: { navigation: any }) {
     }
   }
 
+  // Build usersWithStories array for StoryViewer (just the current user)
+  const usersWithStories = [
+    {
+      id: user?.id || '',
+      username: user?.username || '',
+      avatarUrl: (user as any)?.avatarUrl || '',
+      isOwn: true,
+      hasStory: stories.length > 0,
+    },
+  ];
+
   /**
    * Renders a single story item
    */
@@ -160,6 +171,8 @@ export default function MyStoriesScreen({ navigation }: { navigation: any }) {
               userId: user.id,
               username: user.username,
               avatarUrl: (user as any).avatarUrl || '',
+              usersWithStories,
+              userIndex: 0,
             });
           }}
         >

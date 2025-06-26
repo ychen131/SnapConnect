@@ -52,6 +52,14 @@ export type ProfileStackParamList = {
     userId: string;
     username?: string;
     avatarUrl?: string;
+    usersWithStories: Array<{
+      id: string;
+      username: string;
+      avatarUrl?: string;
+      isOwn?: boolean;
+      hasStory?: boolean;
+    }>;
+    userIndex: number;
   };
 };
 
@@ -64,6 +72,14 @@ export type StoriesStackParamList = {
     userId: string;
     username?: string;
     avatarUrl?: string;
+    usersWithStories: Array<{
+      id: string;
+      username: string;
+      avatarUrl?: string;
+      isOwn?: boolean;
+      hasStory?: boolean;
+    }>;
+    userIndex: number;
   };
 };
 
