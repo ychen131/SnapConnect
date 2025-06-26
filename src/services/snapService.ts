@@ -13,48 +13,135 @@ import { getOrCreateConversation } from './chatService';
  */
 export async function uploadMediaToStorage(localUri: string, userId: string): Promise<string> {
   try {
-    // Get file extension
-    const ext = localUri.split('.').pop() || 'jpg';
+    // Validate inputs
+    if (!localUri || !userId) {
+      throw new Error('Invalid input: localUri and userId are required');
+    }
+
+    // Validate file URI format
+    if (!localUri.startsWith('file://') && !localUri.startsWith('content://')) {
+      throw new Error('Invalid file URI format');
+    }
+
+    // Get file extension and validate
+    const ext = localUri.split('.').pop()?.toLowerCase() || 'jpg';
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'mov', 'avi'];
+
+    if (!allowedExtensions.includes(ext)) {
+      throw new Error(
+        `Unsupported file type: ${ext}. Supported types: ${allowedExtensions.join(', ')}`,
+      );
+    }
+
     const fileName = `${userId}_${Date.now()}.${ext}`;
     const path = `snaps/${userId}/${fileName}`;
 
-    // Fetch the file as a blob
-    const response = await fetch(localUri);
-    // const blob = await response.blob();
+    // Determine content type based on extension
+    let contentType = 'image/jpeg'; // default
+    if (ext === 'png') contentType = 'image/png';
+    else if (ext === 'gif') contentType = 'image/gif';
+    else if (ext === 'mp4') contentType = 'video/mp4';
+    else if (ext === 'mov') contentType = 'video/quicktime';
+    else if (ext === 'avi') contentType = 'video/x-msvideo';
 
-    // // Debug log for blob
-    // console.log('🟣 uploadMediaToStorage blob:', { size: blob.size, type: blob.type, localUri });
+    // Fetch the file with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-    // // Determine content type (fallback to image/jpeg)
-    // // const contentType = blob.type || 'image/jpeg';
-    // console.log('blob:', blob);
-    const bytes = await response.arrayBuffer();
-    console.log('🟣 uploadMediaToStorage bytes:', {
-      size: bytes.byteLength,
-      type: 'image/jpeg',
-      localUri,
-    });
+    try {
+      const response = await fetch(localUri, { signal: controller.signal });
+      clearTimeout(timeoutId);
 
-    // Upload to Supabase Storage with correct content type
-    const { data, error } = await supabase.storage.from('media').upload(path, bytes, {
-      cacheControl: '3600',
-      upsert: false,
-      contentType: 'image/jpeg',
-    });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+      }
 
-    if (error) {
-      console.error('Error uploading to storage:', error);
-      throw error;
+      const bytes = await response.arrayBuffer();
+
+      // Validate file size (max 50MB)
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (bytes.byteLength > maxSize) {
+        throw new Error(
+          `File too large: ${(bytes.byteLength / 1024 / 1024).toFixed(1)}MB. Maximum size is 50MB.`,
+        );
+      }
+
+      console.log('🟣 uploadMediaToStorage bytes:', {
+        size: bytes.byteLength,
+        type: contentType,
+        localUri,
+      });
+
+      // Upload to Supabase Storage with retry mechanism
+      let uploadAttempts = 0;
+      const maxUploadAttempts = 3;
+
+      while (uploadAttempts < maxUploadAttempts) {
+        try {
+          const { data, error } = await supabase.storage.from('media').upload(path, bytes, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: contentType,
+          });
+
+          if (error) {
+            console.error(`Upload attempt ${uploadAttempts + 1} failed:`, error);
+            throw error;
+          }
+
+          // Get the public URL
+          const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
+
+          if (!urlData?.publicUrl) {
+            throw new Error('Failed to get public URL for uploaded file');
+          }
+
+          console.log('✅ Media uploaded successfully:', urlData.publicUrl);
+          return urlData.publicUrl;
+        } catch (uploadError) {
+          uploadAttempts++;
+
+          if (uploadAttempts >= maxUploadAttempts) {
+            throw uploadError;
+          }
+
+          // Wait before retry (exponential backoff)
+          await new Promise((resolve) => setTimeout(resolve, 1000 * uploadAttempts));
+          console.log(`Retrying upload (attempt ${uploadAttempts + 1}/${maxUploadAttempts})...`);
+        }
+      }
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        throw new Error('Upload timeout: File took too long to process');
+      }
+      throw fetchError;
     }
-
-    // Get the public URL
-    const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
-
-    return urlData.publicUrl;
   } catch (error) {
     console.error('Error uploading media:', error);
+
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('network') || error.message.includes('fetch')) {
+        throw new Error('Network error: Please check your connection and try again');
+      } else if (error.message.includes('storage') || error.message.includes('upload')) {
+        throw new Error('Storage error: Failed to upload file. Please try again');
+      } else if (error.message.includes('timeout')) {
+        throw new Error('Upload timeout: File took too long to process. Please try a smaller file');
+      } else if (error.message.includes('too large')) {
+        throw new Error('File too large: Please select a smaller file (max 50MB)');
+      } else if (error.message.includes('Unsupported file type')) {
+        throw new Error(
+          'Unsupported file type: Please select a photo (JPG, PNG, GIF) or video (MP4, MOV, AVI)',
+        );
+      }
+    }
+
     throw error;
   }
+
+  // This should never be reached, but TypeScript needs it
+  throw new Error('Unexpected error: Upload failed for unknown reason');
 }
 
 /**

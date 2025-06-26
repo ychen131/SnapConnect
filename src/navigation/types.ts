@@ -47,6 +47,7 @@ export type ChatStackParamList = {
 export type ProfileStackParamList = {
   ProfileMain: undefined;
   AddFriends: undefined;
+  MyStories: undefined;
 };
 
 /**

@@ -13,6 +13,7 @@ import IndividualChatScreen from '../screens/Main/IndividualChatScreen';
 import StoriesScreen from '../screens/Main/StoriesScreen';
 import ProfileScreen from '../screens/Main/ProfileScreen';
 import AddFriendsScreen from '../screens/Main/AddFriendsScreen';
+import MyStoriesScreen from '../screens/Main/MyStoriesScreen';
 import SnapPhotoViewer from '../screens/Main/SnapPhotoViewer';
 import SnapVideoViewer from '../screens/Main/SnapVideoViewer';
 import type {
@@ -62,6 +63,7 @@ function ProfileStackNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ProfileMain" component={ProfileScreen} />
       <Stack.Screen name="AddFriends" component={AddFriendsScreen} />
+      <Stack.Screen name="MyStories" component={MyStoriesScreen} />
     </Stack.Navigator>
   );
 }

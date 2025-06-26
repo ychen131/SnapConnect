@@ -10,6 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { RootState } from '../../store';
 import { logout } from '../../store/authSlice';
 import { getFriendsList } from '../../services/friendService';
+import { getUserStories } from '../../services/storyService';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 
@@ -52,10 +53,13 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
       const friends = await getFriendsList(user.id);
       setFriendCount(friends.length);
 
-      // TODO: Load snap count and story count when those features are implemented
-      // For now, we'll keep them at 0
+      // Load story count
+      const stories = await getUserStories(user.id, false); // Only active stories
+      setStoryCount(stories.length);
+
+      // TODO: Load snap count when that feature is implemented
+      // For now, we'll keep it at 0
       setSnapCount(0);
-      setStoryCount(0);
     } catch (error) {
       console.error('Error loading user stats:', error);
     } finally {
@@ -88,6 +92,13 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
    */
   function handleAddFriends() {
     navigation.navigate('AddFriends');
+  }
+
+  /**
+   * Navigates to My Stories screen
+   */
+  function handleMyStories() {
+    navigation.navigate('MyStories');
   }
 
   /**
@@ -158,6 +169,13 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
             label="Add Friends"
             variant="primary"
             onPress={handleAddFriends}
+            className="w-full"
+          />
+
+          <Button
+            label="My Stories"
+            variant="secondary"
+            onPress={handleMyStories}
             className="w-full"
           />
 

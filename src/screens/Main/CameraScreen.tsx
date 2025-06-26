@@ -3,13 +3,25 @@
  * @description Camera screen with live preview, flip camera, and Snapchat-style capture button (tap for photo, hold for video). Video recording implemented.
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { CameraView, CameraType } from 'expo-camera';
 import { useCameraPermission } from '../../services/permissionService';
 import { Video, ResizeMode } from 'expo-av';
 import { useNavigation } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CameraStackParamList } from '../../navigation/types';
+import { RootState } from '../../store';
+import { addToStory } from '../../services/storyService';
+import { uploadMediaToStorage } from '../../services/snapService';
 
 type CameraScreenNavigationProp = NativeStackNavigationProp<CameraStackParamList, 'CameraMain'>;
 
@@ -30,11 +42,15 @@ export default function CameraScreen() {
   const [recordingProgress, setRecordingProgress] = useState(0); // 0-100
   const [recordingDuration, setRecordingDuration] = useState(0); // in milliseconds
   const [photoTimer, setPhotoTimer] = useState(3); // Default 3 seconds
+  const [isAddingToStory, setIsAddingToStory] = useState(false);
+  const [hasNetworkError, setHasNetworkError] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const cameraRef = useRef<CameraView | null>(null);
   const recordingTimeout = useRef<NodeJS.Timeout | null>(null);
   const recordingPromise = useRef<Promise<any> | null>(null);
   const progressTimer = useRef<NodeJS.Timeout | null>(null);
   const navigation = useNavigation<CameraScreenNavigationProp>();
+  const user = useSelector((state: RootState) => state.auth.user);
 
   if (!permission) {
     return (
@@ -106,6 +122,52 @@ export default function CameraScreen() {
     setVideoUri(null);
   }
 
+  // Handle navigation back to camera
+  function handleBackToCamera() {
+    setPhotoUri(null);
+    setVideoUri(null);
+    setPhotoTimer(3);
+    setIsAddingToStory(false);
+    setUploadProgress(0);
+    setHasNetworkError(false);
+  }
+
+  // Check network connectivity
+  async function checkNetworkConnectivity(): Promise<boolean> {
+    try {
+      const response = await fetch('https://www.google.com', {
+        method: 'HEAD',
+        mode: 'no-cors',
+      });
+      return true;
+    } catch (error) {
+      console.log('Network connectivity check failed:', error);
+      return false;
+    }
+  }
+
+  // Handle offline scenario
+  function handleOfflineScenario() {
+    setHasNetworkError(true);
+    Alert.alert(
+      'No Internet Connection',
+      "You need an internet connection to add stories. Your content will be saved locally and you can try again when you're back online.",
+      [
+        {
+          text: 'Save Locally',
+          onPress: () => {
+            // TODO: Implement local storage for offline content
+            Alert.alert('Coming Soon', 'Offline storage will be available in a future update.');
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+    );
+  }
+
   // Handle send functionality
   function handleSend() {
     console.log('📤 Sending content...');
@@ -124,6 +186,152 @@ export default function CameraScreen() {
         contentType: 'video',
       });
     }
+  }
+
+  // Handle add to story functionality
+  async function handleAddToStory() {
+    if (!user?.id) {
+      Alert.alert('Error', 'User not found. Please log in again.');
+      return;
+    }
+
+    // Validate content exists
+    if (!photoUri && !videoUri) {
+      Alert.alert('Error', 'No content to add to story. Please capture a photo or video first.');
+      return;
+    }
+
+    // Check network connectivity first
+    const isOnline = await checkNetworkConnectivity();
+    if (!isOnline) {
+      handleOfflineScenario();
+      return;
+    }
+
+    setIsAddingToStory(true);
+    setUploadProgress(0);
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    while (retryCount < maxRetries) {
+      try {
+        console.log(`📖 Adding to story (attempt ${retryCount + 1}/${maxRetries})...`);
+
+        let mediaUrl: string;
+        let mediaType: 'photo' | 'video';
+        let timer: number | undefined;
+
+        // Simulate upload progress
+        setUploadProgress(25);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        if (photoUri) {
+          mediaUrl = await uploadMediaToStorage(photoUri, user.id);
+          mediaType = 'photo';
+          timer = photoTimer;
+        } else if (videoUri) {
+          mediaUrl = await uploadMediaToStorage(videoUri, user.id);
+          mediaType = 'video';
+        } else {
+          throw new Error('No content to add to story');
+        }
+
+        setUploadProgress(75);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        const story = await addToStory(user.id, mediaUrl, mediaType, timer);
+
+        setUploadProgress(100);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        if (story) {
+          Alert.alert(
+            'Story Added!',
+            'Your story has been added successfully. You can view it in the Stories tab or My Stories section.',
+            [
+              {
+                text: 'Continue with Content',
+                onPress: () => {
+                  // Keep the content for sending to friends
+                  // Don't clear photoUri/videoUri
+                },
+              },
+              {
+                text: 'Done',
+                onPress: () => {
+                  setPhotoUri(null);
+                  setVideoUri(null);
+                  setIsAddingToStory(false);
+                  setUploadProgress(0);
+                  setHasNetworkError(false);
+                },
+              },
+            ],
+          );
+          return; // Success, exit retry loop
+        } else {
+          throw new Error('Failed to create story in database');
+        }
+      } catch (error) {
+        retryCount++;
+        console.error(`Error adding to story (attempt ${retryCount}/${maxRetries}):`, error);
+
+        if (retryCount >= maxRetries) {
+          // Final attempt failed
+          let errorMessage = 'Failed to add to story. Please try again.';
+
+          if (error instanceof Error) {
+            if (error.message.includes('network') || error.message.includes('fetch')) {
+              errorMessage = 'Network error. Please check your connection and try again.';
+            } else if (error.message.includes('storage') || error.message.includes('upload')) {
+              errorMessage = 'Failed to upload media. Please try again.';
+            } else if (error.message.includes('database') || error.message.includes('insert')) {
+              errorMessage = 'Failed to save story. Please try again.';
+            }
+          }
+
+          Alert.alert('Error', errorMessage, [
+            {
+              text: 'Retry',
+              onPress: () => handleAddToStory(),
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+          ]);
+        } else {
+          // Show retry dialog for intermediate failures
+          const shouldRetry = await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              'Upload Failed',
+              `Failed to add story (attempt ${retryCount}/${maxRetries}). Would you like to retry?`,
+              [
+                {
+                  text: 'Retry',
+                  onPress: () => resolve(true),
+                },
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                  onPress: () => resolve(false),
+                },
+              ],
+            );
+          });
+
+          if (!shouldRetry) {
+            break; // User chose to cancel
+          }
+
+          // Wait a bit before retrying
+          await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
+    }
+
+    setIsAddingToStory(false);
+    setUploadProgress(0);
   }
 
   // --- Snapchat-style capture logic ---
@@ -246,6 +454,26 @@ export default function CameraScreen() {
     }
   }
 
+  // Progress indicator component
+  function UploadProgressIndicator() {
+    if (!isAddingToStory) return null;
+
+    return (
+      <View className="absolute left-0 right-0 top-1/2 items-center">
+        <View className="rounded-lg bg-black/80 px-6 py-4">
+          <Text className="mb-2 text-center text-white">Adding to Story...</Text>
+          <View className="h-2 w-48 overflow-hidden rounded-full bg-gray-600">
+            <View
+              className="h-full rounded-full bg-purple-500"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </View>
+          <Text className="mt-2 text-center text-sm text-white">{uploadProgress}% Complete</Text>
+        </View>
+      </View>
+    );
+  }
+
   // Enhanced Photo Preview Screen
   if (photoUri) {
     return (
@@ -263,7 +491,7 @@ export default function CameraScreen() {
         <View className="absolute left-0 right-0 top-12 flex-row items-center justify-between px-4">
           <TouchableOpacity
             className="rounded-full bg-black/50 p-3"
-            onPress={handleDiscard}
+            onPress={handleBackToCamera}
             accessibilityLabel="Close"
           >
             <Text className="text-lg font-bold text-white">✕</Text>
@@ -288,16 +516,40 @@ export default function CameraScreen() {
           </View>
         </View>
 
+        {/* Network Error Indicator */}
+        {hasNetworkError && (
+          <View className="absolute left-0 right-0 top-20 items-center">
+            <View className="rounded-lg bg-red-500 px-4 py-2">
+              <Text className="text-sm font-semibold text-white">⚠️ No Internet Connection</Text>
+            </View>
+          </View>
+        )}
+
         {/* Bottom Controls */}
         <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center space-x-4 px-4">
           <TouchableOpacity className="rounded-full bg-gray-600 px-6 py-3" onPress={handleSave}>
             <Text className="font-bold text-white">Save</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            className="rounded-full bg-purple-500 px-6 py-3"
+            onPress={handleAddToStory}
+            disabled={isAddingToStory}
+          >
+            {isAddingToStory ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Text className="font-bold text-white">Add to Story</Text>
+            )}
+          </TouchableOpacity>
+
           <TouchableOpacity className="rounded-full bg-yellow-500 px-6 py-3" onPress={handleSend}>
             <Text className="font-bold text-black">Send</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Progress Indicator */}
+        {isAddingToStory && (photoUri || videoUri) && <UploadProgressIndicator />}
       </View>
     );
   }
@@ -322,12 +574,21 @@ export default function CameraScreen() {
         <View className="absolute left-0 right-0 top-12 flex-row items-center justify-between px-4">
           <TouchableOpacity
             className="rounded-full bg-black/50 p-3"
-            onPress={handleDiscard}
+            onPress={handleBackToCamera}
             accessibilityLabel="Close"
           >
             <Text className="text-lg font-bold text-white">✕</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Network Error Indicator */}
+        {hasNetworkError && (
+          <View className="absolute left-0 right-0 top-20 items-center">
+            <View className="rounded-lg bg-red-500 px-4 py-2">
+              <Text className="text-sm font-semibold text-white">⚠️ No Internet Connection</Text>
+            </View>
+          </View>
+        )}
 
         {/* Bottom Controls */}
         <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center space-x-4 px-4">
@@ -335,10 +596,25 @@ export default function CameraScreen() {
             <Text className="font-bold text-white">Save</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            className="rounded-full bg-purple-500 px-6 py-3"
+            onPress={handleAddToStory}
+            disabled={isAddingToStory}
+          >
+            {isAddingToStory ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Text className="font-bold text-white">Add to Story</Text>
+            )}
+          </TouchableOpacity>
+
           <TouchableOpacity className="rounded-full bg-yellow-500 px-6 py-3" onPress={handleSend}>
             <Text className="font-bold text-black">Send</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Progress Indicator */}
+        {isAddingToStory && (photoUri || videoUri) && <UploadProgressIndicator />}
       </View>
     );
   }
