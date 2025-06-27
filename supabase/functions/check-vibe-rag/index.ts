@@ -97,8 +97,36 @@ Focus on specific, observable cues and be as detailed as possible. The confidenc
       jsonContent = jsonContent.replace(/^```\n/, '').replace(/\n```$/, '');
     }
 
-    const analysis = JSON.parse(jsonContent);
-    return analysis;
+    // Clean up common JSON issues
+    jsonContent = jsonContent
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+      .replace(/\n/g, '\\n') // Escape newlines
+      .replace(/\r/g, '\\r') // Escape carriage returns
+      .replace(/\t/g, '\\t'); // Escape tabs
+
+    console.log('Cleaned JSON content:', jsonContent);
+
+    let result;
+    try {
+      result = JSON.parse(jsonContent);
+    } catch (err) {
+      console.error('Failed to parse LLM response:', err, jsonContent);
+      // Try to extract JSON using regex as fallback
+      const jsonMatch = jsonContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          result = JSON.parse(jsonMatch[0]);
+        } catch (fallbackErr) {
+          console.error('Fallback JSON parsing also failed:', fallbackErr);
+          throw new Error('Failed to parse LLM response as JSON after cleanup attempts.');
+        }
+      } else {
+        throw new Error('Failed to parse LLM response as JSON.');
+      }
+    }
+    console.log('Parsed result:', result);
+
+    return result;
   } catch (error) {
     console.error('Vision analysis error:', error);
     throw new Error(`Vision analysis failed: ${(error as Error).message}`);
@@ -253,9 +281,33 @@ Return ONLY a JSON object with this structure:
       jsonContent = jsonContent.replace(/^```\n/, '').replace(/\n```$/, '');
     }
 
+    // Clean up common JSON issues
+    jsonContent = jsonContent
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+      .replace(/\n/g, '\\n') // Escape newlines
+      .replace(/\r/g, '\\r') // Escape carriage returns
+      .replace(/\t/g, '\\t'); // Escape tabs
+
     console.log('Cleaned JSON content:', jsonContent);
 
-    const result = JSON.parse(jsonContent);
+    let result;
+    try {
+      result = JSON.parse(jsonContent);
+    } catch (err) {
+      console.error('Failed to parse LLM response:', err, jsonContent);
+      // Try to extract JSON using regex as fallback
+      const jsonMatch = jsonContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          result = JSON.parse(jsonMatch[0]);
+        } catch (fallbackErr) {
+          console.error('Fallback JSON parsing also failed:', fallbackErr);
+          throw new Error('Failed to parse LLM response as JSON after cleanup attempts.');
+        }
+      } else {
+        throw new Error('Failed to parse LLM response as JSON.');
+      }
+    }
     console.log('Parsed result:', result);
 
     return {
