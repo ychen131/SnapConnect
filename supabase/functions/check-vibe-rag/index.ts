@@ -209,7 +209,7 @@ SOURCES: ${sources.join(', ')}
 
 Based on the vision analysis and the scientific knowledge base content, provide TWO outputs:
 
-1. SHORT_SUMMARY: Generate a playful, descriptive 1 sentence summary (more than 5 words but capped at 20 words) of the dog's vibe (e.g., "A happy pup, calm and curious about the world.", "A curious explorer, ready for adventure!", "Happy tail wagger, soaking in the sights.")
+1. SHORT_SUMMARY: Generate a playful, descriptive 1 sentence summary (more than 5 words but capped at 15 words) of the dog's vibe (e.g., "A happy pup, calm and curious about the world.", "A curious explorer, ready for adventure!", "Happy tail wagger, soaking in the sights.")
 
 2. DETAILED_REPORT: Generate a structured markdown report explaining the dog's emotional state, body language, and context. Structure it as:
 
