@@ -187,7 +187,7 @@ describe('permissionService', () => {
       showPermissionDeniedAlert('camera');
       expect(Alert.alert).toHaveBeenCalledWith(
         'Permission Required',
-        'SnapConnect needs camera access to function properly. Please enable it in your device settings.',
+        'SnapDog needs camera access to function properly. Please enable it in your device settings.',
         expect.any(Array),
         { cancelable: false },
       );
@@ -197,7 +197,7 @@ describe('permissionService', () => {
       showPermissionDeniedAlert('microphone');
       expect(Alert.alert).toHaveBeenCalledWith(
         'Permission Required',
-        'SnapConnect needs microphone access to function properly. Please enable it in your device settings.',
+        'SnapDog needs microphone access to function properly. Please enable it in your device settings.',
         expect.any(Array),
         { cancelable: false },
       );
@@ -207,7 +207,7 @@ describe('permissionService', () => {
       showPermissionDeniedAlert('both');
       expect(Alert.alert).toHaveBeenCalledWith(
         'Permission Required',
-        'SnapConnect needs camera and microphone access to function properly. Please enable it in your device settings.',
+        'SnapDog needs camera and microphone access to function properly. Please enable it in your device settings.',
         expect.any(Array),
         { cancelable: false },
       );

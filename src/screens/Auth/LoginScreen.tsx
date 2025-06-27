@@ -39,7 +39,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     <View className="flex-1 items-center justify-center bg-gray-50 px-6">
       <Card className="w-full max-w-xs rounded-lg bg-white p-6 shadow-sm">
         <Text className="mb-4 text-center text-2xl font-bold text-purple-600">
-          Welcome to SnapConnect
+          Welcome to SnapDog
         </Text>
         <Text className="mb-6 text-center text-base text-gray-600">Sign in to your account</Text>
         <Input

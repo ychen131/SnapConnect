@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "SnapConnect-temp",
-    "slug": "SnapConnect-temp",
+    "name": "SnapDog",
+    "slug": "SnapDog",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,10 +14,9 @@
     },
     "ios": {
       "supportsTablet": true,
-      "infoPlist": {
-        "NSCameraUsageDescription": "SnapConnect needs access to your camera to take photos and videos.",
-        "NSMicrophoneUsageDescription": "SnapConnect needs access to your microphone to record videos with sound."
-      }
+      "bundleIdentifier": "com.snapdog.app",
+      "NSCameraUsageDescription": "SnapDog needs access to your camera to take photos and videos.",
+      "NSMicrophoneUsageDescription": "SnapDog needs access to your microphone to record videos with sound."
     },
     "android": {
       "adaptiveIcon": {
@@ -34,8 +33,8 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow SnapConnect to access your camera to take photos and videos.",
-          "microphonePermission": "Allow SnapConnect to access your microphone to record videos with sound."
+          "cameraPermission": "Allow SnapDog to access your camera to take photos and videos.",
+          "microphonePermission": "Allow SnapDog to access your microphone to record videos with sound."
         }
       ]
     ]

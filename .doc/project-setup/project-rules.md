@@ -1,6 +1,6 @@
-# SnapConnect - Project & Coding Rules
+# SnapDog - Project & Coding Rules
 
-This document outlines the architectural and coding standards for the SnapConnect project. Adherence to these rules is mandatory to ensure the codebase is modular, scalable, maintainable, and easily navigable by both developers and AI-assisted tools.
+This document outlines the architectural and coding standards for the SnapDog project. Adherence to these rules is mandatory to ensure the codebase is modular, scalable, maintainable, and easily navigable by both developers and AI-assisted tools.
 
 ---
 

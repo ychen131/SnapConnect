@@ -192,7 +192,7 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
         {/* App Info */}
         <View className="mt-8 p-6">
           <Card className="p-4">
-            <Text className="text-center text-sm text-gray-500">SnapConnect v1.0.0</Text>
+            <Text className="text-center text-sm text-gray-500">SnapDog v1.0.0</Text>
             <Text className="mt-1 text-center text-xs text-gray-400">
               Built with React Native & Expo
             </Text>

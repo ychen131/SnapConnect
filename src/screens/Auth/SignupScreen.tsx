@@ -1,6 +1,6 @@
 /**
  * @file SignupScreen.tsx
- * @description Complete signup form with email, password, username, and date of birth validation.
+ * @description Displays a complete signup form with validation for SnapDog.
  */
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Alert } from 'react-native';
@@ -53,7 +53,7 @@ function isValidPassword(password: string): boolean {
 }
 
 /**
- * Displays a complete signup form with validation for SnapConnect.
+ * Displays a complete signup form with validation for SnapDog.
  */
 export default function SignupScreen({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
@@ -111,7 +111,7 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
     if (!dateOfBirth) {
       newErrors.dateOfBirth = 'Date of birth is required';
     } else if (!isValidAge(dateOfBirth)) {
-      newErrors.dateOfBirth = 'You must be at least 13 years old to use SnapConnect';
+      newErrors.dateOfBirth = 'You must be at least 13 years old to use SnapDog';
     }
 
     setErrors(newErrors);
@@ -181,7 +181,7 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
           <Text className="mb-4 text-center text-2xl font-bold text-purple-600">
             Create Account
           </Text>
-          <Text className="mb-6 text-center text-base text-gray-600">Join SnapConnect today</Text>
+          <Text className="mb-6 text-center text-base text-gray-600">Join SnapDog today</Text>
 
           <Input
             placeholder="Email"

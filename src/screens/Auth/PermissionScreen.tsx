@@ -62,7 +62,7 @@ export default function PermissionScreen({ navigation }: { navigation: any }) {
 
     Alert.alert(
       'Limited Functionality',
-      'You can still use SnapConnect, but camera and video features will be disabled. You can enable permissions later in settings.',
+      'You can still use SnapDog, but camera and video features will be disabled. You can enable permissions later in settings.',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Continue', onPress: () => navigation.replace('Main') },
@@ -76,10 +76,10 @@ export default function PermissionScreen({ navigation }: { navigation: any }) {
         <Card className="w-full max-w-sm rounded-lg bg-white p-6 shadow-sm">
           <View className="mb-6 items-center">
             <Text className="mb-2 text-center text-3xl font-bold text-purple-600">
-              Welcome to SnapConnect!
+              Welcome to SnapDog!
             </Text>
             <Text className="text-center text-base text-gray-600">
-              To get the full SnapConnect experience, we need a few permissions.
+              To get the full SnapDog experience, we need a few permissions.
             </Text>
           </View>
 

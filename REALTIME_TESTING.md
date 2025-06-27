@@ -1,8 +1,8 @@
-# Realtime Subscription Testing Guide
+# Realtime Testing Guide
 
 ## Overview
 
-This guide covers testing the realtime subscription functionality for chat messages in SnapConnect.
+This guide covers testing the realtime subscription functionality for chat messages in SnapDog.
 
 ## Prerequisites
 

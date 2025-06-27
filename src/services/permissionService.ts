@@ -1,6 +1,6 @@
 /**
  * @file permissionService.ts
- * @description Service for handling camera and microphone permissions in SnapConnect.
+ * @description Service for handling camera and microphone permissions in SnapDog.
  */
 import { useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import { Alert, Linking, Platform } from 'react-native';
@@ -124,7 +124,7 @@ export async function requestCameraAndMicrophonePermissions(): Promise<Permissio
  */
 export function showPermissionDeniedAlert(permissionType: 'camera' | 'microphone' | 'both'): void {
   const title = 'Permission Required';
-  const message = `SnapConnect needs ${permissionType === 'both' ? 'camera and microphone' : permissionType} access to function properly. Please enable it in your device settings.`;
+  const message = `SnapDog needs ${permissionType === 'both' ? 'camera and microphone' : permissionType} access to function properly. Please enable it in your device settings.`;
 
   Alert.alert(
     title,
