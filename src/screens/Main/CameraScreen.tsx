@@ -30,10 +30,13 @@ import {
   composeImageWithOverlays,
   createTextOverlay,
   updateTextOverlay,
+  exportEditedImage,
   type FilterType,
   type TextOverlay as TextOverlayType,
 } from '../../utils/imageFilters';
 import FilteredImage from '../../components/camera/FilteredImage';
+import * as FileSystem from 'expo-file-system';
+import { ImageFormat } from '@shopify/react-native-skia';
 
 type CameraScreenNavigationProp = NativeStackNavigationProp<CameraStackParamList, 'CameraMain'>;
 
@@ -62,6 +65,7 @@ export default function CameraScreen() {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [hasEdits, setHasEdits] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   // Text overlay state
   const [textOverlays, setTextOverlays] = useState<TextOverlayType[]>([]);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
@@ -78,6 +82,7 @@ export default function CameraScreen() {
   const progressTimer = useRef<NodeJS.Timeout | null>(null);
   const navigation = useNavigation<CameraScreenNavigationProp>();
   const user = useSelector((state: RootState) => state.auth.user);
+  const filteredImageRef = useRef<any>(null);
 
   if (!permission) {
     return (
@@ -315,6 +320,54 @@ export default function CameraScreen() {
         },
       },
     ]);
+  }
+
+  async function handleSavePress() {
+    console.log('💾 Save button pressed');
+
+    if (!photoUri) {
+      Alert.alert('Error', 'No photo to save. Please take a photo first.');
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // 1. Take a snapshot of the Skia canvas
+      if (!filteredImageRef.current || !filteredImageRef.current.makeImageSnapshot) {
+        throw new Error('FilteredImage ref or snapshot method not available');
+      }
+      const skiaImage = filteredImageRef.current.makeImageSnapshot();
+      if (!skiaImage) throw new Error('Failed to capture Skia snapshot');
+
+      // 2. Encode to base64 (PNG)
+      const base64 = skiaImage.encodeToBase64(ImageFormat.PNG, 1.0);
+      if (!base64) throw new Error('Failed to encode Skia image to base64');
+
+      // 3. Write to a temporary file
+      const fileUri = FileSystem.cacheDirectory + `snapdog_export_${Date.now()}.png`;
+      await FileSystem.writeAsStringAsync(fileUri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // 4. Save to gallery
+      const { status } = await import('expo-media-library').then((m) =>
+        m.requestPermissionsAsync(),
+      );
+      if (status !== 'granted') throw new Error('Media library permission denied');
+      await import('expo-media-library').then((m) => m.saveToLibraryAsync(fileUri));
+
+      Alert.alert('Success!', 'Your edited image has been saved to your device gallery.', [
+        { text: 'OK' },
+      ]);
+    } catch (error) {
+      console.error('❌ Save failed:', error);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to save image.', [
+        { text: 'OK' },
+      ]);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   // Check network connectivity
@@ -665,7 +718,9 @@ export default function CameraScreen() {
       <View className="flex-1 bg-black">
         {/* Photo Preview */}
         <View className="flex-1">
-          {photoUri && <FilteredImage imageUri={photoUri} filter={currentFilter} />}
+          {photoUri && (
+            <FilteredImage imageUri={photoUri} filter={currentFilter} ref={filteredImageRef} />
+          )}
 
           {/* Text Overlays */}
           {textOverlays.map((overlay) => (
@@ -766,9 +821,11 @@ export default function CameraScreen() {
           onUndoPress={handleUndoPress}
           onRedoPress={handleRedoPress}
           onResetPress={handleResetPress}
+          onSavePress={handleSavePress}
           canUndo={canUndo}
           canRedo={canRedo}
           hasEdits={hasEdits}
+          isSaving={isSaving}
           selectedFilter={currentFilter}
           onFilterSelect={handleFilterSelect}
           imageUri={photoUri || undefined}
@@ -856,9 +913,11 @@ export default function CameraScreen() {
           onUndoPress={handleUndoPress}
           onRedoPress={handleRedoPress}
           onResetPress={handleResetPress}
+          onSavePress={handleSavePress}
           canUndo={canUndo}
           canRedo={canRedo}
           hasEdits={hasEdits}
+          isSaving={isSaving}
           selectedFilter={currentFilter}
           onFilterSelect={handleFilterSelect}
           imageUri={photoUri || undefined}

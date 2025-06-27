@@ -2,7 +2,7 @@
  * @file FilteredImage.tsx
  * @description Skia-powered image component with real-time color matrix filters
  */
-import React from 'react';
+import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { Canvas, Image as SkiaImage, useImage, ColorMatrix } from '@shopify/react-native-skia';
 import { useWindowDimensions } from 'react-native';
 
@@ -27,14 +27,26 @@ export type SkiaFilterType = keyof typeof FILTERS;
 interface FilteredImageProps {
   imageUri: string;
   filter: SkiaFilterType;
+  canvasRef?: React.Ref<any>;
 }
 
 /**
  * Skia-powered image with color matrix filter
+ * Now supports forwarding a ref to the Canvas for snapshot/export
  */
-export default function FilteredImage({ imageUri, filter }: FilteredImageProps) {
+const FilteredImage = forwardRef<any, FilteredImageProps>(({ imageUri, filter }, ref) => {
   const { width } = useWindowDimensions();
   const image = useImage(imageUri);
+  const canvasRef = useRef<any>(null);
+
+  useImperativeHandle(ref, () => ({
+    makeImageSnapshot: () => {
+      if (canvasRef.current) {
+        return canvasRef.current.makeImageSnapshot();
+      }
+      return null;
+    },
+  }));
 
   if (!image) return null;
 
@@ -46,7 +58,7 @@ export default function FilteredImage({ imageUri, filter }: FilteredImageProps) 
   const matrix = FILTERS[filter] || undefined;
 
   return (
-    <Canvas style={{ width: displayWidth, height: displayHeight }}>
+    <Canvas ref={canvasRef} style={{ width: displayWidth, height: displayHeight }}>
       <SkiaImage
         image={image}
         x={0}
@@ -59,4 +71,6 @@ export default function FilteredImage({ imageUri, filter }: FilteredImageProps) 
       </SkiaImage>
     </Canvas>
   );
-}
+});
+
+export default FilteredImage;

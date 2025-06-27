@@ -3,7 +3,15 @@
  * @description Horizontal scrollable toolbar for photo editing tools including filters, text overlays, and other editing features.
  */
 import React from 'react';
-import { View, ScrollView, TouchableOpacity, Text, Dimensions, StyleSheet } from 'react-native';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Text,
+  Dimensions,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import FilterCarousel from './FilterCarousel';
 import type { FilterType } from '../../utils/imageFilters';
 
@@ -16,9 +24,11 @@ interface PhotoEditingToolbarProps {
   onUndoPress: () => void;
   onRedoPress: () => void;
   onResetPress: () => void;
+  onSavePress: () => void;
   canUndo: boolean;
   canRedo: boolean;
   hasEdits: boolean;
+  isSaving?: boolean;
   // Filter-related props
   selectedFilter: FilterType;
   onFilterSelect: (filter: FilterType) => void;
@@ -36,9 +46,11 @@ export default function PhotoEditingToolbar({
   onUndoPress,
   onRedoPress,
   onResetPress,
+  onSavePress,
   canUndo,
   canRedo,
   hasEdits,
+  isSaving,
   selectedFilter,
   onFilterSelect,
   imageUri,
@@ -111,6 +123,20 @@ export default function PhotoEditingToolbar({
         >
           <Text style={[styles.toolIcon, !hasEdits && styles.disabledIcon]}>↺</Text>
           <Text style={[styles.toolLabel, !hasEdits && styles.disabledIcon]}>Reset</Text>
+        </TouchableOpacity>
+
+        {/* Save Button */}
+        <TouchableOpacity
+          style={[styles.toolButton, isSaving && styles.disabledButton]}
+          onPress={onSavePress}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text style={styles.toolIcon}>S</Text>
+          )}
+          <Text style={[styles.toolLabel, isSaving && styles.disabledIcon]}>Save</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

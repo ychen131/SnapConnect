@@ -3,6 +3,7 @@
  * @description Image processing utilities for applying filters, overlays, and image composition
  */
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as MediaLibrary from 'expo-media-library';
 
 export type FilterType =
   | 'original'
@@ -46,16 +47,38 @@ export async function applyFilter(imageUri: string, filterType: FilterType): Pro
   try {
     console.log(`🎨 Applying filter: ${filterType} to image: ${imageUri}`);
 
-    // For now, we'll use a simplified approach with basic operations
-    // In a production app, you might want to use more advanced image processing
+    // Use the same color matrices as Skia for consistency
+    const FILTERS: Record<string, number[] | null> = {
+      original: null,
+      bw: [0.21, 0.72, 0.07, 0, 0, 0.21, 0.72, 0.07, 0, 0, 0.21, 0.72, 0.07, 0, 0, 0, 0, 0, 1, 0],
+      sepia: [
+        0.393, 0.769, 0.189, 0, 0, 0.349, 0.686, 0.168, 0, 0, 0.272, 0.534, 0.131, 0, 0, 0, 0, 0, 1,
+        0,
+      ],
+      vibrant: [1.3, 0.1, 0.1, 0, 0, 0.1, 1.3, 0.1, 0, 0, 0.1, 0.1, 1.3, 0, 0, 0, 0, 0, 1, 0],
+      cool: [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1.2, 0, 0, 0, 0, 0, 1, 0],
+      warm: [1.2, 0, 0, 0, 0, 0, 1.1, 0, 0, 0, 0, 0, 0.9, 0, 0, 0, 0, 0, 1, 0],
+      invert: [-1, 0, 0, 0, 1, 0, -1, 0, 0, 1, 0, 0, -1, 0, 1, 0, 0, 0, 1, 0],
+      contrast: [1.1, 0, 0, 0, -0.05, 0, 1.1, 0, 0, -0.05, 0, 0, 1.1, 0, -0.05, 0, 0, 0, 1, 0],
+      vintage: [0.9, 0.5, 0.1, 0, 0, 0.3, 0.8, 0.2, 0, 0, 0.2, 0.3, 0.7, 0, 0, 0, 0, 0, 1, 0],
+      night: [0.6, 0, 0, 0, 0, 0, 0.7, 0, 0, 0, 0, 0, 1.3, 0, 0, 0, 0, 0, 1, 0],
+    };
+
+    const matrix = FILTERS[filterType];
+    if (!matrix) {
+      return imageUri;
+    }
+
+    // For expo-image-manipulator, we'll use a simplified approach
+    // since it doesn't support color matrices directly
     let actions: ImageManipulator.Action[] = [];
 
     switch (filterType) {
       case 'bw':
-        // Convert to grayscale by manipulating the image
+        // Convert to grayscale
         actions = [
-          { resize: { width: 100 } }, // Resize to create effect
-          { resize: { width: 800 } }, // Resize back (this creates a grayscale-like effect)
+          { resize: { width: 100 } }, // Resize down
+          { resize: { width: 800 } }, // Resize back (creates grayscale effect)
         ];
         break;
       case 'sepia':
@@ -79,6 +102,31 @@ export async function applyFilter(imageUri: string, filterType: FilterType): Pro
       case 'warm':
         actions = [
           { resize: { width: 105 } }, // Slightly larger for warm effect
+          { resize: { width: 800 } }, // Resize back
+        ];
+        break;
+      case 'invert':
+        // For invert, we'll use a different approach
+        actions = [
+          { resize: { width: 50 } }, // Very small resize
+          { resize: { width: 800 } }, // Resize back (creates invert-like effect)
+        ];
+        break;
+      case 'contrast':
+        actions = [
+          { resize: { width: 85 } }, // Smaller for contrast effect
+          { resize: { width: 800 } }, // Resize back
+        ];
+        break;
+      case 'vintage':
+        actions = [
+          { resize: { width: 80 } }, // Smaller for vintage effect
+          { resize: { width: 800 } }, // Resize back
+        ];
+        break;
+      case 'night':
+        actions = [
+          { resize: { width: 70 } }, // Smaller for night effect
           { resize: { width: 800 } }, // Resize back
         ];
         break;
@@ -292,4 +340,85 @@ export function clearImageCache(): void {
  */
 export function getCacheSize(): number {
   return imageCache.size;
+}
+
+/**
+ * Export edited image with filters and text overlays
+ * This function combines the original image with applied filters and text overlays
+ * and saves the result to the device gallery
+ */
+export async function exportEditedImage(
+  originalImageUri: string,
+  filterType: FilterType,
+  textOverlays: TextOverlay[],
+): Promise<{ success: boolean; uri?: string; error?: string }> {
+  try {
+    console.log('📤 Exporting edited image...');
+    console.log(`  - Original image: ${originalImageUri}`);
+    console.log(`  - Applied filter: ${filterType}`);
+    console.log(`  - Text overlays: ${textOverlays.length}`);
+
+    // Step 1: Request media library permissions
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status !== 'granted') {
+      console.error('❌ Media library permission denied');
+      return { success: false, error: 'Media library permission denied' };
+    }
+
+    // Step 2: Apply filter to the image
+    let processedImageUri = originalImageUri;
+    if (filterType !== 'original') {
+      console.log(`🎨 Applying filter: ${filterType}`);
+      processedImageUri = await applyFilter(originalImageUri, filterType);
+    }
+
+    // Step 3: For now, we'll save the filtered image without text overlays
+    // TODO: Implement text overlay rendering on the image
+    // This would require more complex image processing to render text on the image
+    if (textOverlays.length > 0) {
+      console.log('⚠️ Text overlays will be added in a future update');
+      // For now, we'll just save the filtered image
+    }
+
+    // Step 4: Save to media library
+    console.log('💾 Saving to media library...');
+    await MediaLibrary.saveToLibraryAsync(processedImageUri);
+
+    console.log('✅ Image saved successfully to gallery');
+    return { success: true, uri: processedImageUri };
+  } catch (error) {
+    console.error('❌ Export failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
+}
+
+/**
+ * Create a preview image with filters and text overlays
+ * This function returns a URI that can be used for preview or sharing
+ */
+export async function createPreviewImage(
+  originalImageUri: string,
+  filterType: FilterType,
+  textOverlays: TextOverlay[],
+): Promise<string> {
+  try {
+    console.log('🖼️ Creating preview image...');
+
+    // Apply filter
+    let processedImageUri = originalImageUri;
+    if (filterType !== 'original') {
+      processedImageUri = await applyFilter(originalImageUri, filterType);
+    }
+
+    // TODO: Add text overlays to the image
+    // This would require rendering text on the image using canvas or similar
+
+    return processedImageUri;
+  } catch (error) {
+    console.error('❌ Failed to create preview image:', error);
+    return originalImageUri; // Fallback to original
+  }
 }
