@@ -68,6 +68,9 @@ export default function CameraScreen() {
   // Text edit modal state
   const [isTextModalVisible, setIsTextModalVisible] = useState(false);
   const [editingOverlay, setEditingOverlay] = useState<TextOverlayType | null>(null);
+  // Filter state
+  const [filteredImageUri, setFilteredImageUri] = useState<string | null>(null);
+  const [isApplyingFilter, setIsApplyingFilter] = useState(false);
   const cameraRef = useRef<CameraView | null>(null);
   const recordingTimeout = useRef<NodeJS.Timeout | null>(null);
   const recordingPromise = useRef<Promise<any> | null>(null);
@@ -165,9 +168,37 @@ export default function CameraScreen() {
 
   // Photo editing toolbar handlers
   function handleFilterPress() {
+    // Filter selection is now handled by the FilterCarousel
     console.log('🎨 Filter button pressed');
-    // TODO: Implement filter selection modal
-    Alert.alert('Coming Soon', 'Filter selection will be available in the next update!');
+  }
+
+  function handleFilterSelect(filter: FilterType) {
+    console.log('🎨 Filter selected:', filter);
+    setCurrentFilter(filter);
+
+    // Apply filter to the current image
+    if (photoUri) {
+      applyFilterToImage(photoUri, filter);
+    }
+  }
+
+  async function applyFilterToImage(imageUri: string, filter: FilterType) {
+    if (filter === 'original') {
+      setFilteredImageUri(null);
+      return;
+    }
+
+    setIsApplyingFilter(true);
+    try {
+      const filteredUri = await applyFilter(imageUri, filter);
+      setFilteredImageUri(filteredUri);
+    } catch (error) {
+      console.error('❌ Failed to apply filter:', error);
+      // Fallback to original
+      setFilteredImageUri(null);
+    } finally {
+      setIsApplyingFilter(false);
+    }
   }
 
   function handleTextPress() {
@@ -621,7 +652,7 @@ export default function CameraScreen() {
         {/* Photo Preview */}
         <View className="flex-1">
           <Image
-            source={{ uri: photoUri }}
+            source={{ uri: filteredImageUri || photoUri }}
             style={{ flex: 1, width: '100%' }}
             resizeMode="contain"
           />
@@ -728,6 +759,9 @@ export default function CameraScreen() {
           canUndo={canUndo}
           canRedo={canRedo}
           hasEdits={hasEdits}
+          selectedFilter={currentFilter}
+          onFilterSelect={handleFilterSelect}
+          imageUri={photoUri || undefined}
         />
 
         {/* Text Edit Modal */}
@@ -815,6 +849,9 @@ export default function CameraScreen() {
           canUndo={canUndo}
           canRedo={canRedo}
           hasEdits={hasEdits}
+          selectedFilter={currentFilter}
+          onFilterSelect={handleFilterSelect}
+          imageUri={photoUri || undefined}
         />
       </View>
     );

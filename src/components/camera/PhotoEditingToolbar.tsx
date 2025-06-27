@@ -3,20 +3,26 @@
  * @description Horizontal scrollable toolbar for photo editing tools including filters, text overlays, and other editing features.
  */
 import React from 'react';
-import { View, ScrollView, TouchableOpacity, Text, Dimensions } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Text, Dimensions, StyleSheet } from 'react-native';
+import FilterCarousel from './FilterCarousel';
+import type { FilterType } from '../../utils/imageFilters';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 interface PhotoEditingToolbarProps {
   isVisible: boolean;
-  onFilterPress?: () => void;
-  onTextPress?: () => void;
-  onUndoPress?: () => void;
-  onRedoPress?: () => void;
-  onResetPress?: () => void;
-  canUndo?: boolean;
-  canRedo?: boolean;
-  hasEdits?: boolean;
+  onFilterPress: () => void;
+  onTextPress: () => void;
+  onUndoPress: () => void;
+  onRedoPress: () => void;
+  onResetPress: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  hasEdits: boolean;
+  // Filter-related props
+  selectedFilter: FilterType;
+  onFilterSelect: (filter: FilterType) => void;
+  imageUri?: string;
 }
 
 /**
@@ -30,90 +36,112 @@ export default function PhotoEditingToolbar({
   onUndoPress,
   onRedoPress,
   onResetPress,
-  canUndo = false,
-  canRedo = false,
-  hasEdits = false,
+  canUndo,
+  canRedo,
+  hasEdits,
+  selectedFilter,
+  onFilterSelect,
+  imageUri,
 }: PhotoEditingToolbarProps) {
   if (!isVisible) {
     return null;
   }
 
+  const availableFilters: FilterType[] = ['original', 'bw', 'sepia', 'vibrant', 'cool', 'warm'];
+
   return (
-    <View className="absolute bottom-24 left-0 right-0 bg-black/80 px-4 py-3">
+    <View style={styles.container}>
+      {/* Filter Carousel */}
+      <FilterCarousel
+        filters={availableFilters}
+        selectedFilter={selectedFilter}
+        onFilterSelect={onFilterSelect}
+        imageUri={imageUri}
+      />
+
+      {/* Editing Tools */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: 8,
-          gap: 12,
-        }}
-        className="flex-row"
+        contentContainerStyle={styles.toolsContainer}
       >
-        {/* Filters Button */}
-        <TouchableOpacity
-          className="items-center justify-center rounded-full bg-white/20 px-4 py-3"
-          onPress={onFilterPress}
-          activeOpacity={0.7}
-        >
-          <Text className="text-2xl">🎨</Text>
-          <Text className="mt-1 text-xs font-medium text-white">Filters</Text>
-        </TouchableOpacity>
-
-        {/* Text Overlay Button */}
-        <TouchableOpacity
-          className="items-center justify-center rounded-full bg-white/20 px-4 py-3"
-          onPress={onTextPress}
-          activeOpacity={0.7}
-        >
-          <Text className="text-2xl">📝</Text>
-          <Text className="mt-1 text-xs font-medium text-white">Text</Text>
-        </TouchableOpacity>
-
         {/* Undo Button */}
         <TouchableOpacity
-          className={`items-center justify-center rounded-full px-4 py-3 ${
-            canUndo ? 'bg-white/20' : 'bg-white/10'
-          }`}
+          style={[styles.toolButton, !canUndo && styles.disabledButton]}
           onPress={onUndoPress}
           disabled={!canUndo}
-          activeOpacity={0.7}
         >
-          <Text className={`text-2xl ${canUndo ? 'text-white' : 'text-white/50'}`}>↶</Text>
-          <Text className={`mt-1 text-xs font-medium ${canUndo ? 'text-white' : 'text-white/50'}`}>
-            Undo
-          </Text>
+          <Text style={[styles.toolIcon, !canUndo && styles.disabledIcon]}>↶</Text>
+          <Text style={[styles.toolLabel, !canUndo && styles.disabledIcon]}>Undo</Text>
         </TouchableOpacity>
 
         {/* Redo Button */}
         <TouchableOpacity
-          className={`items-center justify-center rounded-full px-4 py-3 ${
-            canRedo ? 'bg-white/20' : 'bg-white/10'
-          }`}
+          style={[styles.toolButton, !canRedo && styles.disabledButton]}
           onPress={onRedoPress}
           disabled={!canRedo}
-          activeOpacity={0.7}
         >
-          <Text className={`text-2xl ${canRedo ? 'text-white' : 'text-white/50'}`}>↷</Text>
-          <Text className={`mt-1 text-xs font-medium ${canRedo ? 'text-white' : 'text-white/50'}`}>
-            Redo
-          </Text>
+          <Text style={[styles.toolIcon, !canRedo && styles.disabledIcon]}>↷</Text>
+          <Text style={[styles.toolLabel, !canRedo && styles.disabledIcon]}>Redo</Text>
+        </TouchableOpacity>
+
+        {/* Text Button */}
+        <TouchableOpacity style={styles.toolButton} onPress={onTextPress}>
+          <Text style={styles.toolIcon}>T</Text>
+          <Text style={styles.toolLabel}>Text</Text>
         </TouchableOpacity>
 
         {/* Reset Button */}
         <TouchableOpacity
-          className={`items-center justify-center rounded-full px-4 py-3 ${
-            hasEdits ? 'bg-red-500/80' : 'bg-white/10'
-          }`}
+          style={[styles.toolButton, !hasEdits && styles.disabledButton]}
           onPress={onResetPress}
           disabled={!hasEdits}
-          activeOpacity={0.7}
         >
-          <Text className={`text-2xl ${hasEdits ? 'text-white' : 'text-white/50'}`}>🔄</Text>
-          <Text className={`mt-1 text-xs font-medium ${hasEdits ? 'text-white' : 'text-white/50'}`}>
-            Reset
-          </Text>
+          <Text style={[styles.toolIcon, !hasEdits && styles.disabledIcon]}>↺</Text>
+          <Text style={[styles.toolLabel, !hasEdits && styles.disabledIcon]}>Reset</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 24,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    padding: 4,
+    paddingBottom: 3,
+  },
+  toolsContainer: {
+    paddingHorizontal: 8,
+    gap: 12,
+  },
+  toolButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 4,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  disabledButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  toolIcon: {
+    fontSize: 24,
+    color: 'white',
+  },
+  disabledIcon: {
+    color: 'rgba(255, 255, 255, 0.5)',
+  },
+  toolLabel: {
+    marginLeft: 4,
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'white',
+  },
+});
