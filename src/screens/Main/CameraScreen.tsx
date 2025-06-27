@@ -22,6 +22,17 @@ import type { CameraStackParamList } from '../../navigation/types';
 import { RootState } from '../../store';
 import { addToStory } from '../../services/storyService';
 import { uploadMediaToStorage } from '../../services/snapService';
+import PhotoEditingToolbar from '../../components/camera/PhotoEditingToolbar';
+import TextOverlay from '../../components/camera/TextOverlay';
+import TextEditModal from '../../components/camera/TextEditModal';
+import {
+  applyFilter,
+  composeImageWithOverlays,
+  createTextOverlay,
+  updateTextOverlay,
+  type FilterType,
+  type TextOverlay as TextOverlayType,
+} from '../../utils/imageFilters';
 
 type CameraScreenNavigationProp = NativeStackNavigationProp<CameraStackParamList, 'CameraMain'>;
 
@@ -45,6 +56,18 @@ export default function CameraScreen() {
   const [isAddingToStory, setIsAddingToStory] = useState(false);
   const [hasNetworkError, setHasNetworkError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  // Photo editing state
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const [hasEdits, setHasEdits] = useState(false);
+  // Text overlay state
+  const [textOverlays, setTextOverlays] = useState<TextOverlayType[]>([]);
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+  const [currentFilter, setCurrentFilter] = useState<FilterType>('original');
+  // Text edit modal state
+  const [isTextModalVisible, setIsTextModalVisible] = useState(false);
+  const [editingOverlay, setEditingOverlay] = useState<TextOverlayType | null>(null);
   const cameraRef = useRef<CameraView | null>(null);
   const recordingTimeout = useRef<NodeJS.Timeout | null>(null);
   const recordingPromise = useRef<Promise<any> | null>(null);
@@ -130,6 +153,123 @@ export default function CameraScreen() {
     setIsAddingToStory(false);
     setUploadProgress(0);
     setHasNetworkError(false);
+    // Reset editing state
+    setIsEditMode(false);
+    setCanUndo(false);
+    setCanRedo(false);
+    setHasEdits(false);
+    setTextOverlays([]);
+    setSelectedTextId(null);
+    setCurrentFilter('original');
+  }
+
+  // Photo editing toolbar handlers
+  function handleFilterPress() {
+    console.log('🎨 Filter button pressed');
+    // TODO: Implement filter selection modal
+    Alert.alert('Coming Soon', 'Filter selection will be available in the next update!');
+  }
+
+  function handleTextPress() {
+    console.log('📝 Text button pressed');
+    // Create a new text overlay at the center of the screen
+    const newOverlay = createTextOverlay(
+      'Tap to edit',
+      100, // x position
+      200, // y position
+      24, // fontSize
+      '#FFFFFF', // color
+      'System', // fontFamily
+    );
+
+    setTextOverlays((prev) => [...prev, newOverlay]);
+    setSelectedTextId(newOverlay.id);
+    setHasEdits(true);
+    setCanUndo(true);
+  }
+
+  function handleTextPositionChange(id: string, x: number, y: number) {
+    setTextOverlays((prev) =>
+      prev.map((overlay) => (overlay.id === id ? { ...overlay, x, y } : overlay)),
+    );
+  }
+
+  function handleTextSelect(id: string) {
+    setSelectedTextId(id);
+  }
+
+  function handleTextDelete(id: string) {
+    setTextOverlays((prev) => prev.filter((overlay) => overlay.id !== id));
+    if (selectedTextId === id) {
+      setSelectedTextId(null);
+    }
+    setHasEdits(textOverlays.length > 1);
+  }
+
+  function handleTextOverlayPress(id: string) {
+    // Open text editing modal
+    const overlay = textOverlays.find((o) => o.id === id);
+    if (overlay) {
+      setEditingOverlay(overlay);
+      setIsTextModalVisible(true);
+    }
+  }
+
+  function handleTextSave(updatedOverlay: TextOverlayType) {
+    setTextOverlays((prev) =>
+      prev.map((overlay) => (overlay.id === updatedOverlay.id ? updatedOverlay : overlay)),
+    );
+    setIsTextModalVisible(false);
+    setEditingOverlay(null);
+  }
+
+  function handleTextModalCancel() {
+    setIsTextModalVisible(false);
+    setEditingOverlay(null);
+  }
+
+  function handleTextModalDelete() {
+    if (editingOverlay) {
+      handleTextDelete(editingOverlay.id);
+      setIsTextModalVisible(false);
+      setEditingOverlay(null);
+    }
+  }
+
+  function handleUndoPress() {
+    console.log('↶ Undo button pressed');
+    // TODO: Implement undo functionality
+    Alert.alert('Coming Soon', 'Undo functionality will be available in the next update!');
+  }
+
+  function handleRedoPress() {
+    console.log('↷ Redo button pressed');
+    // TODO: Implement redo functionality
+    Alert.alert('Coming Soon', 'Redo functionality will be available in the next update!');
+  }
+
+  function handleResetPress() {
+    console.log('🔄 Reset button pressed');
+    Alert.alert('Reset Edits', 'Are you sure you want to reset all edits? This cannot be undone.', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Reset',
+        style: 'destructive',
+        onPress: () => {
+          // TODO: Implement reset functionality
+          setHasEdits(false);
+          setCanUndo(false);
+          setCanRedo(false);
+          setTextOverlays([]);
+          setSelectedTextId(null);
+          setCurrentFilter('original');
+          Alert.alert('Reset Complete', 'All edits have been reset.');
+        },
+      },
+    ]);
   }
 
   // Check network connectivity
@@ -485,6 +625,19 @@ export default function CameraScreen() {
             style={{ flex: 1, width: '100%' }}
             resizeMode="contain"
           />
+
+          {/* Text Overlays */}
+          {textOverlays.map((overlay) => (
+            <TextOverlay
+              key={overlay.id}
+              overlay={overlay}
+              onPositionChange={handleTextPositionChange}
+              onPress={handleTextOverlayPress}
+              isSelected={selectedTextId === overlay.id}
+              onSelect={handleTextSelect}
+              onDelete={handleTextDelete}
+            />
+          ))}
         </View>
 
         {/* Top Controls */}
@@ -498,21 +651,34 @@ export default function CameraScreen() {
           </TouchableOpacity>
 
           <View className="flex-row space-x-2">
+            {/* Edit Button */}
             <TouchableOpacity
               className="rounded-full bg-black/50 px-4 py-2"
-              onPress={() => setPhotoTimer(Math.max(1, photoTimer - 1))}
+              onPress={() => setIsEditMode(!isEditMode)}
             >
-              <Text className="font-bold text-white">-</Text>
+              <Text className="font-bold text-white">{isEditMode ? 'Done' : 'Edit'}</Text>
             </TouchableOpacity>
-            <View className="rounded-full bg-black/50 px-4 py-2">
-              <Text className="font-bold text-white">{photoTimer}s</Text>
-            </View>
-            <TouchableOpacity
-              className="rounded-full bg-black/50 px-4 py-2"
-              onPress={() => setPhotoTimer(Math.min(10, photoTimer + 1))}
-            >
-              <Text className="font-bold text-white">+</Text>
-            </TouchableOpacity>
+
+            {/* Timer Controls - only show when not in edit mode */}
+            {!isEditMode && (
+              <>
+                <TouchableOpacity
+                  className="rounded-full bg-black/50 px-4 py-2"
+                  onPress={() => setPhotoTimer(Math.max(1, photoTimer - 1))}
+                >
+                  <Text className="font-bold text-white">-</Text>
+                </TouchableOpacity>
+                <View className="rounded-full bg-black/50 px-4 py-2">
+                  <Text className="font-bold text-white">{photoTimer}s</Text>
+                </View>
+                <TouchableOpacity
+                  className="rounded-full bg-black/50 px-4 py-2"
+                  onPress={() => setPhotoTimer(Math.min(10, photoTimer + 1))}
+                >
+                  <Text className="font-bold text-white">+</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
 
@@ -550,6 +716,28 @@ export default function CameraScreen() {
 
         {/* Progress Indicator */}
         {isAddingToStory && (photoUri || videoUri) && <UploadProgressIndicator />}
+
+        {/* Photo Editing Toolbar */}
+        <PhotoEditingToolbar
+          isVisible={isEditMode}
+          onFilterPress={handleFilterPress}
+          onTextPress={handleTextPress}
+          onUndoPress={handleUndoPress}
+          onRedoPress={handleRedoPress}
+          onResetPress={handleResetPress}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          hasEdits={hasEdits}
+        />
+
+        {/* Text Edit Modal */}
+        <TextEditModal
+          visible={isTextModalVisible}
+          overlay={editingOverlay}
+          onSave={handleTextSave}
+          onCancel={handleTextModalCancel}
+          onDelete={handleTextModalDelete}
+        />
       </View>
     );
   }
@@ -615,6 +803,19 @@ export default function CameraScreen() {
 
         {/* Progress Indicator */}
         {isAddingToStory && (photoUri || videoUri) && <UploadProgressIndicator />}
+
+        {/* Photo Editing Toolbar */}
+        <PhotoEditingToolbar
+          isVisible={isEditMode}
+          onFilterPress={handleFilterPress}
+          onTextPress={handleTextPress}
+          onUndoPress={handleUndoPress}
+          onRedoPress={handleRedoPress}
+          onResetPress={handleResetPress}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          hasEdits={hasEdits}
+        />
       </View>
     );
   }
