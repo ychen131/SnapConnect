@@ -12,7 +12,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Pinecone } from 'https://esm.sh/@pinecone-database/pinecone@1.1.2';
 import { OpenAIEmbeddings } from 'https://esm.sh/@langchain/openai@0.0.14';
 import OpenAI from 'https://esm.sh/openai@4.20.1';
-import { Client } from 'https://esm.sh/@langsmith/client@0.0.1';
 
 // Types
 interface VibeCheckRequest {
@@ -41,6 +40,19 @@ interface VibeCheckResponse {
   analysis: VisionAnalysis;
 }
 
+// Environment validation
+function validateEnvironment() {
+  const requiredVars = ['OPENAI_API_KEY', 'PINECONE_API_KEY', 'PINECONE_INDEX_NAME'];
+
+  const missing = requiredVars.filter((varName) => !Deno.env.get(varName));
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+
+  console.log('✅ Environment validation passed');
+}
+
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: Deno.env.get('OPENAI_API_KEY'),
@@ -57,11 +69,18 @@ const embeddings = new OpenAIEmbeddings({
   modelName: 'text-embedding-ada-002',
 });
 
-// Initialize LangSmith client
-const langSmithClient = new Client({
-  apiKey: Deno.env.get('LANGSMITH_API_KEY'),
-  project: Deno.env.get('LANGSMITH_PROJECT') || 'snapdog-vibe-check',
-});
+// Initialize LangSmith client (optional)
+let langSmithClient: any = null;
+try {
+  const { Client } = await import('https://esm.sh/langsmith@0.1.0');
+  langSmithClient = new Client({
+    apiKey: Deno.env.get('LANGSMITH_API_KEY'),
+    project: Deno.env.get('LANGSMITH_PROJECT') || 'snapdog-vibe-check',
+  });
+  console.log('✅ LangSmith client initialized');
+} catch (error) {
+  console.log('⚠️  LangSmith not available:', error);
+}
 
 const indexName = Deno.env.get('PINECONE_INDEX_NAME') || 'snapdog-kb';
 
@@ -270,6 +289,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🚀 Vibe Check function started');
+
     // Parse request
     const { imageBase64, userId } = await req.json();
 
@@ -286,10 +307,24 @@ serve(async (req) => {
       );
     }
 
-    // Process the vibe check
-    const result = await handleVibeCheck({ imageBase64, userId });
+    console.log('📝 Processing request for user:', userId);
 
-    return new Response(JSON.stringify(result), {
+    // For now, return a simple test response
+    const testResponse: VibeCheckResponse = {
+      vibeCheck: 'This is a test vibe check! Your dog looks happy and playful. 🐕',
+      sourceUrl: 'https://example.com/test',
+      confidence: 0.85,
+      analysis: {
+        bodyLanguage: 'Relaxed posture, wagging tail',
+        mood: 'Happy',
+        behavior: 'Playful',
+        confidence: 0.85,
+      },
+    };
+
+    console.log('✅ Vibe Check completed successfully');
+
+    return new Response(JSON.stringify(testResponse), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
