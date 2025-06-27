@@ -84,6 +84,30 @@ export default function CameraScreen() {
   const user = useSelector((state: RootState) => state.auth.user);
   const filteredImageRef = useRef<any>(null);
 
+  // Edit history stack for undo/redo
+  interface EditState {
+    filter: FilterType;
+    textOverlays: TextOverlayType[];
+  }
+  const MAX_HISTORY = 20;
+  const [editHistory, setEditHistory] = useState<EditState[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+
+  // Initialize history when a photo is taken
+  useEffect(() => {
+    if (photoUri) {
+      const initialState: EditState = {
+        filter: 'original',
+        textOverlays: [],
+      };
+      setEditHistory([initialState]);
+      setHistoryIndex(0);
+    } else {
+      setEditHistory([]);
+      setHistoryIndex(-1);
+    }
+  }, [photoUri]);
+
   if (!permission) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
@@ -178,19 +202,30 @@ export default function CameraScreen() {
     console.log('🎨 Filter button pressed');
   }
 
+  // Helper to push a new edit state to history
+  function pushEditState(newState: EditState) {
+    setEditHistory((prev) => {
+      let history = prev.slice(0, historyIndex + 1); // Truncate redo history
+      history.push(newState);
+      if (history.length > MAX_HISTORY) history = history.slice(history.length - MAX_HISTORY);
+      return history;
+    });
+    setHistoryIndex((prev) => {
+      let next = prev + 1;
+      if (next >= MAX_HISTORY) next = MAX_HISTORY - 1;
+      return next;
+    });
+    setCanUndo(true);
+    setCanRedo(false);
+  }
+
   function handleFilterSelect(filter: FilterType) {
     console.log('🎨 Filter selected:', filter);
     setCurrentFilter(filter);
-
-    // Set hasEdits if a non-original filter is applied
-    if (filter !== 'original') {
-      setHasEdits(true);
-    }
-
-    // Apply filter to the current image
-    if (photoUri) {
-      applyFilterToImage(photoUri, filter);
-    }
+    if (filter !== 'original') setHasEdits(true);
+    if (photoUri) applyFilterToImage(photoUri, filter);
+    // Push to history
+    pushEditState({ filter, textOverlays });
   }
 
   async function applyFilterToImage(imageUri: string, filter: FilterType) {
@@ -214,20 +249,14 @@ export default function CameraScreen() {
 
   function handleTextPress() {
     console.log('📝 Text button pressed');
-    // Create a new text overlay at the center of the screen
-    const newOverlay = createTextOverlay(
-      'Tap to edit',
-      100, // x position
-      200, // y position
-      24, // fontSize
-      '#FFFFFF', // color
-      'System', // fontFamily
-    );
-
-    setTextOverlays((prev) => [...prev, newOverlay]);
+    const newOverlay = createTextOverlay('Tap to edit', 100, 200, 24, '#FFFFFF', 'System');
+    const newOverlays = [...textOverlays, newOverlay];
+    setTextOverlays(newOverlays);
     setSelectedTextId(newOverlay.id);
     setHasEdits(true);
     setCanUndo(true);
+    // Push to history
+    pushEditState({ filter: currentFilter, textOverlays: newOverlays });
   }
 
   function handleTextPositionChange(id: string, x: number, y: number) {
@@ -243,13 +272,12 @@ export default function CameraScreen() {
   function handleTextDelete(id: string) {
     setTextOverlays((prev) => {
       const newOverlays = prev.filter((overlay) => overlay.id !== id);
-      // Update hasEdits based on the new length
       setHasEdits(newOverlays.length > 0 || currentFilter !== 'original');
+      // Push to history
+      pushEditState({ filter: currentFilter, textOverlays: newOverlays });
       return newOverlays;
     });
-    if (selectedTextId === id) {
-      setSelectedTextId(null);
-    }
+    if (selectedTextId === id) setSelectedTextId(null);
   }
 
   function handleTextOverlayPress(id: string) {
@@ -262,9 +290,14 @@ export default function CameraScreen() {
   }
 
   function handleTextSave(updatedOverlay: TextOverlayType) {
-    setTextOverlays((prev) =>
-      prev.map((overlay) => (overlay.id === updatedOverlay.id ? updatedOverlay : overlay)),
-    );
+    setTextOverlays((prev) => {
+      const newOverlays = prev.map((overlay) =>
+        overlay.id === updatedOverlay.id ? updatedOverlay : overlay,
+      );
+      // Push to history
+      pushEditState({ filter: currentFilter, textOverlays: newOverlays });
+      return newOverlays;
+    });
     setIsTextModalVisible(false);
     setEditingOverlay(null);
   }
@@ -283,15 +316,27 @@ export default function CameraScreen() {
   }
 
   function handleUndoPress() {
-    console.log('↶ Undo button pressed');
-    // TODO: Implement undo functionality
-    Alert.alert('Coming Soon', 'Undo functionality will be available in the next update!');
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      const state = editHistory[newIndex];
+      setCurrentFilter(state.filter);
+      setTextOverlays(state.textOverlays);
+      setCanUndo(newIndex > 0);
+      setCanRedo(true);
+    }
   }
 
   function handleRedoPress() {
-    console.log('↷ Redo button pressed');
-    // TODO: Implement redo functionality
-    Alert.alert('Coming Soon', 'Redo functionality will be available in the next update!');
+    if (historyIndex < editHistory.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      const state = editHistory[newIndex];
+      setCurrentFilter(state.filter);
+      setTextOverlays(state.textOverlays);
+      setCanUndo(true);
+      setCanRedo(newIndex < editHistory.length - 1);
+    }
   }
 
   function handleResetPress() {
