@@ -1,5 +1,5 @@
 /**
- * Test script for the Vibe Check RAG function
+ * Test script for the Check Vibe RAG function
  * This script tests the complete RAG pipeline with a sample request
  */
 
@@ -13,7 +13,7 @@ dotenv.config({ path: '.env.local' });
 
 async function testVibeCheckFunction() {
   try {
-    console.log('🧪 Testing Vibe Check RAG function...');
+    console.log('🧪 Testing Check Vibe RAG function...');
 
     // Initialize Supabase client
     const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -27,10 +27,9 @@ async function testVibeCheckFunction() {
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Create a test image (you can replace this with a real dog photo)
-    // For now, we'll use a placeholder base64 string
+    // Create a valid test image (1x1 pixel PNG)
     const testImageBase64 =
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='; // 1x1 pixel
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
 
     // Test request payload
     const testRequest = {
@@ -38,10 +37,10 @@ async function testVibeCheckFunction() {
       userId: 'test-user-123',
     };
 
-    console.log('📤 Sending test request to Vibe Check function...');
+    console.log('📤 Sending test request to Check Vibe function...');
 
     // Call the Edge Function
-    const { data, error } = await supabase.functions.invoke('vibe-check-rag', {
+    const { data, error } = await supabase.functions.invoke('check-vibe-rag', {
       body: testRequest,
     });
 
@@ -72,7 +71,7 @@ async function testVibeCheckFunction() {
 // Run the test
 testVibeCheckFunction()
   .then(() => {
-    console.log('🎉 Vibe Check function test completed!');
+    console.log('🎉 Check Vibe function test completed!');
   })
   .catch((error) => {
     console.error('❌ Test failed:', error);
