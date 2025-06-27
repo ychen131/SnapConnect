@@ -47,10 +47,21 @@ export default function PhotoEditingToolbar({
     return null;
   }
 
-  const availableFilters: FilterType[] = ['original', 'bw', 'sepia', 'vibrant', 'cool', 'warm'];
+  const availableFilters: FilterType[] = [
+    'original',
+    'bw',
+    'sepia',
+    'vibrant',
+    'cool',
+    'warm',
+    'invert',
+    'contrast',
+    'vintage',
+    'night',
+  ];
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} pointerEvents="box-none">
       {/* Filter Carousel */}
       <FilterCarousel
         filters={availableFilters}
@@ -64,6 +75,7 @@ export default function PhotoEditingToolbar({
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.toolsContainer}
+        pointerEvents="box-none"
       >
         {/* Undo Button */}
         <TouchableOpacity
@@ -114,6 +126,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     padding: 4,
     paddingBottom: 3,
+    zIndex: 9999,
   },
   toolsContainer: {
     paddingHorizontal: 8,
@@ -127,6 +140,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 999,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    zIndex: 10000,
   },
   disabledButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',

@@ -4,7 +4,17 @@
  */
 import * as ImageManipulator from 'expo-image-manipulator';
 
-export type FilterType = 'original' | 'bw' | 'sepia' | 'vibrant' | 'cool' | 'warm';
+export type FilterType =
+  | 'original'
+  | 'bw'
+  | 'sepia'
+  | 'vibrant'
+  | 'cool'
+  | 'warm'
+  | 'invert'
+  | 'contrast'
+  | 'vintage'
+  | 'night';
 
 export interface TextOverlay {
   id: string;
@@ -93,13 +103,17 @@ export async function applyFilter(imageUri: string, filterType: FilterType): Pro
  * Get filter display name
  */
 export function getFilterDisplayName(filterType: FilterType): string {
-  const names = {
+  const names: Record<FilterType, string> = {
     original: 'Original',
     bw: 'B&W',
     sepia: 'Sepia',
     vibrant: 'Vibrant',
     cool: 'Cool',
     warm: 'Warm',
+    invert: 'Invert',
+    contrast: 'Contrast',
+    vintage: 'Vintage',
+    night: 'Night',
   };
   return names[filterType];
 }
@@ -108,13 +122,17 @@ export function getFilterDisplayName(filterType: FilterType): string {
  * Get filter emoji icon
  */
 export function getFilterIcon(filterType: FilterType): string {
-  const icons = {
+  const icons: Record<FilterType, string> = {
     original: '🖼️',
     bw: '⚫',
     sepia: '🟤',
     vibrant: '🌈',
     cool: '❄️',
     warm: '🔥',
+    invert: '🔄',
+    contrast: '🌓',
+    vintage: '📻',
+    night: '🌙',
   };
   return icons[filterType];
 }

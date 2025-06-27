@@ -33,6 +33,7 @@ import {
   type FilterType,
   type TextOverlay as TextOverlayType,
 } from '../../utils/imageFilters';
+import FilteredImage from '../../components/camera/FilteredImage';
 
 type CameraScreenNavigationProp = NativeStackNavigationProp<CameraStackParamList, 'CameraMain'>;
 
@@ -176,6 +177,11 @@ export default function CameraScreen() {
     console.log('🎨 Filter selected:', filter);
     setCurrentFilter(filter);
 
+    // Set hasEdits if a non-original filter is applied
+    if (filter !== 'original') {
+      setHasEdits(true);
+    }
+
     // Apply filter to the current image
     if (photoUri) {
       applyFilterToImage(photoUri, filter);
@@ -230,11 +236,15 @@ export default function CameraScreen() {
   }
 
   function handleTextDelete(id: string) {
-    setTextOverlays((prev) => prev.filter((overlay) => overlay.id !== id));
+    setTextOverlays((prev) => {
+      const newOverlays = prev.filter((overlay) => overlay.id !== id);
+      // Update hasEdits based on the new length
+      setHasEdits(newOverlays.length > 0 || currentFilter !== 'original');
+      return newOverlays;
+    });
     if (selectedTextId === id) {
       setSelectedTextId(null);
     }
-    setHasEdits(textOverlays.length > 1);
   }
 
   function handleTextOverlayPress(id: string) {
@@ -290,14 +300,18 @@ export default function CameraScreen() {
         text: 'Reset',
         style: 'destructive',
         onPress: () => {
-          // TODO: Implement reset functionality
+          console.log('🔄 Resetting all edits...');
+          // Reset all editing state
           setHasEdits(false);
           setCanUndo(false);
           setCanRedo(false);
           setTextOverlays([]);
           setSelectedTextId(null);
           setCurrentFilter('original');
-          Alert.alert('Reset Complete', 'All edits have been reset.');
+          setFilteredImageUri(null);
+          setIsTextModalVisible(false);
+          setEditingOverlay(null);
+          console.log('✅ All edits reset successfully');
         },
       },
     ]);
@@ -651,11 +665,7 @@ export default function CameraScreen() {
       <View className="flex-1 bg-black">
         {/* Photo Preview */}
         <View className="flex-1">
-          <Image
-            source={{ uri: filteredImageUri || photoUri }}
-            style={{ flex: 1, width: '100%' }}
-            resizeMode="contain"
-          />
+          {photoUri && <FilteredImage imageUri={photoUri} filter={currentFilter} />}
 
           {/* Text Overlays */}
           {textOverlays.map((overlay) => (
