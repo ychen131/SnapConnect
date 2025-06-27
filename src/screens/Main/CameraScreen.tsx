@@ -93,6 +93,12 @@ export default function CameraScreen() {
   const [editHistory, setEditHistory] = useState<EditState[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
+  // Add backup state
+  const [editModeBackup, setEditModeBackup] = useState<{
+    filter: FilterType;
+    overlays: TextOverlayType[];
+  } | null>(null);
+
   // Initialize history when a photo is taken
   useEffect(() => {
     if (photoUri) {
@@ -194,6 +200,9 @@ export default function CameraScreen() {
     setTextOverlays([]);
     setSelectedTextId(null);
     setCurrentFilter('original');
+    setFilteredImageUri(null);
+    setIsTextModalVisible(false);
+    setEditingOverlay(null);
   }
 
   // Photo editing toolbar handlers
@@ -257,6 +266,9 @@ export default function CameraScreen() {
     setCanUndo(true);
     // Push to history
     pushEditState({ filter: currentFilter, textOverlays: newOverlays });
+    // Open text editor modal for new overlay
+    setIsTextModalVisible(true);
+    setEditingOverlay(newOverlay);
   }
 
   function handleTextPositionChange(id: string, x: number, y: number) {
@@ -757,6 +769,11 @@ export default function CameraScreen() {
     );
   }
 
+  function enterEditMode() {
+    setEditModeBackup({ filter: currentFilter, overlays: textOverlays });
+    setIsEditMode(true);
+  }
+
   // Enhanced Photo Preview Screen
   if (photoUri) {
     return (
@@ -768,24 +785,37 @@ export default function CameraScreen() {
           )}
 
           {/* Text Overlays */}
-          {textOverlays.map((overlay) => (
-            <TextOverlay
-              key={overlay.id}
-              overlay={overlay}
-              onPositionChange={handleTextPositionChange}
-              onPress={handleTextOverlayPress}
-              isSelected={selectedTextId === overlay.id}
-              onSelect={handleTextSelect}
-              onDelete={handleTextDelete}
-            />
-          ))}
+          <View pointerEvents={isEditMode ? 'auto' : 'none'} style={{ flex: 1 }}>
+            {textOverlays.map((overlay) => (
+              <TextOverlay
+                key={overlay.id}
+                overlay={overlay}
+                onPositionChange={handleTextPositionChange}
+                onPress={handleTextOverlayPress}
+                isSelected={selectedTextId === overlay.id}
+                onSelect={handleTextSelect}
+                onDelete={handleTextDelete}
+                isEditMode={isEditMode}
+              />
+            ))}
+          </View>
         </View>
 
         {/* Top Controls */}
         <View className="absolute left-0 right-0 top-12 flex-row items-center justify-between px-4">
           <TouchableOpacity
             className="rounded-full bg-black/50 p-3"
-            onPress={handleBackToCamera}
+            onPress={() => {
+              if (editModeBackup) {
+                setCurrentFilter(editModeBackup.filter);
+                setTextOverlays(editModeBackup.overlays);
+              }
+              setIsEditMode(false);
+              setSelectedTextId(null);
+              setIsTextModalVisible(false);
+              setEditingOverlay(null);
+              setEditModeBackup(null);
+            }}
             accessibilityLabel="Close"
           >
             <Text className="text-lg font-bold text-white">✕</Text>
@@ -795,7 +825,15 @@ export default function CameraScreen() {
             {/* Edit Button */}
             <TouchableOpacity
               className="rounded-full bg-black/50 px-4 py-2"
-              onPress={() => setIsEditMode(!isEditMode)}
+              onPress={() =>
+                isEditMode
+                  ? (setIsEditMode(false),
+                    setSelectedTextId(null),
+                    setIsTextModalVisible(false),
+                    setEditingOverlay(null),
+                    setEditModeBackup(null))
+                  : enterEditMode()
+              }
             >
               <Text className="font-bold text-white">{isEditMode ? 'Done' : 'Edit'}</Text>
             </TouchableOpacity>
@@ -908,7 +946,13 @@ export default function CameraScreen() {
         <View className="absolute left-0 right-0 top-12 flex-row items-center justify-between px-4">
           <TouchableOpacity
             className="rounded-full bg-black/50 p-3"
-            onPress={handleBackToCamera}
+            onPress={() => {
+              handleBackToCamera();
+              setSelectedTextId(null);
+              setIsTextModalVisible(false);
+              setEditingOverlay(null);
+              setEditModeBackup(null);
+            }}
             accessibilityLabel="Close"
           >
             <Text className="text-lg font-bold text-white">✕</Text>

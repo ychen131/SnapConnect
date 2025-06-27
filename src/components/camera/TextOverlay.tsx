@@ -4,7 +4,7 @@
  */
 import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureType } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -20,6 +20,7 @@ interface TextOverlayProps {
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   isSelected: boolean;
+  isEditMode: boolean;
 }
 
 /**
@@ -32,6 +33,7 @@ export default function TextOverlay({
   onSelect,
   onDelete,
   isSelected,
+  isEditMode,
 }: TextOverlayProps) {
   const translateX = useSharedValue(overlay.x);
   const translateY = useSharedValue(overlay.y);
@@ -81,8 +83,12 @@ export default function TextOverlay({
     };
   });
 
+  // Only attach gestures if in edit mode
+  const dummyGesture = Gesture.Tap().onStart(() => {});
+  const gestureToUse = isEditMode ? composed : dummyGesture;
+
   return (
-    <GestureDetector gesture={composed}>
+    <GestureDetector gesture={gestureToUse}>
       <Animated.View
         style={[
           styles.container,
@@ -105,7 +111,7 @@ export default function TextOverlay({
           </Text>
 
           {/* Selection indicator */}
-          {isSelected && (
+          {isSelected && isEditMode && (
             <View style={styles.selectionBorder}>
               <View style={styles.cornerHandle} />
               <View style={[styles.cornerHandle, styles.topRight]} />
@@ -114,8 +120,8 @@ export default function TextOverlay({
             </View>
           )}
 
-          {/* Delete button - only show when selected */}
-          {isSelected && (
+          {/* Delete button - only show when selected and in edit mode */}
+          {isSelected && isEditMode && (
             <TouchableOpacity style={styles.deleteButton} onPress={() => onDelete(overlay.id)}>
               <Text style={styles.deleteButtonText}>✕</Text>
             </TouchableOpacity>
