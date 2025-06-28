@@ -21,6 +21,19 @@ interface VibeCheckReportProps {
 }
 
 /**
+ * Preprocesses markdown content to improve rendering
+ * @param markdown The raw markdown content
+ * @returns Processed markdown content
+ */
+function preprocessMarkdown(markdown: string): string {
+  return (
+    markdown
+      // Convert <br> tags to line breaks
+      .replace(/<br>/gi, '\n\n')
+  );
+}
+
+/**
  * Bottom sheet/modal for displaying the detailed Vibe Check markdown report
  */
 export default function VibeCheckReport({
@@ -43,7 +56,7 @@ export default function VibeCheckReport({
 
           {/* Markdown Report */}
           <ScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: 32 }}>
-            <Markdown style={markdownStyles}>{report}</Markdown>
+            <Markdown style={markdownStyles}>{preprocessMarkdown(report)}</Markdown>
           </ScrollView>
         </View>
       </View>

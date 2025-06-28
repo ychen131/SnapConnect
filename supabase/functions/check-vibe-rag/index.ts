@@ -47,6 +47,9 @@ const pinecone = new Pinecone({
  * Analyzes the dog photo using OpenAI Vision API
  */
 async function analyzeVision(imageBase64: string): Promise<VisionAnalysis> {
+  // Clean the base64 string by removing data URL prefix if present
+  const cleanBase64 = imageBase64.startsWith('data:') ? imageBase64.split(',')[1] : imageBase64;
+
   const visionPrompt = `
 You are an expert in canine body language and behavior. Analyze this dog photo and provide a detailed assessment.
 
@@ -72,7 +75,7 @@ Focus on specific, observable cues and be as detailed as possible. The confidenc
             {
               type: 'image_url',
               image_url: {
-                url: `data:image/jpeg;base64,${imageBase64}`,
+                url: `data:image/jpeg;base64,${cleanBase64}`,
               },
             },
           ],
@@ -213,29 +216,29 @@ Based on the vision analysis and the scientific knowledge base content, provide 
 
 2. DETAILED_REPORT: Generate a structured markdown report explaining the dog's emotional state, body language, and context. Structure it as:
 
-## 🐕 VIBE CHECK REPORT
+## 🐕 Vibe Check Report<br>
 
-### Emotional State Assessment
+### Emotional State Assessment<br>
 
 [Analyze the dog's likely emotional state based on visual cues]
 
-### Body Language Breakdown
+### Body Language Breakdown<br>
 
-[Detail specific body language indicators and their meanings]
+[Detail specific body language indicators and their meanings]<br>
 
-### Behavioral Context
+### Behavioral Context<br>
 
-[What might be happening in this situation?]
+[What might be happening in this situation?]<br>
 
-### Comfort & Well-being Level
+### Comfort & Well-being Level<br>
 
-[Rate comfort level and explain indicators]
+[Rate comfort level and explain indicators]<br>
 
-### Scientific Backing
+### Scientific Backing<br>
 
-[Reference specific knowledge base content to support your analysis]
+[Reference specific knowledge base content to support your analysis]<br>
 
-### Recommendations
+### Recommendations<br>
 
 [Provide actionable advice for the dog's well-being or interaction]
 
