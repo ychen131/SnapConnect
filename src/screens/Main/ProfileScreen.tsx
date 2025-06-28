@@ -206,6 +206,29 @@ Channel this energy into positive activities like walks, play, or training sessi
     setSelectedVibeCheck(null);
   }
 
+  // Handler for pressing a story in the grid
+  function handleStoryPress(story: Story) {
+    if (!user) return;
+    const usersWithStories = [
+      {
+        id: user.id,
+        username: user.username,
+        avatarUrl: (user as any)?.avatarUrl || (user as any)?.avatar_url || '',
+        isOwn: true,
+        hasStory: userStories.length > 0,
+      },
+    ];
+    const storyIndex = userStories.findIndex((s) => s.id === story.id);
+    navigation.navigate('StoryViewer', {
+      userId: user.id,
+      username: user.username,
+      avatarUrl: (user as any)?.avatarUrl || (user as any)?.avatar_url || '',
+      usersWithStories,
+      userIndex: 0,
+      storyIndex,
+    });
+  }
+
   if (!user) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
@@ -355,7 +378,7 @@ Channel this energy into positive activities like walks, play, or training sessi
     } else {
       return (
         <View className="px-1 pb-4 pt-1">
-          <StoriesGrid stories={userStories} />
+          <StoriesGrid stories={userStories} onStoryPress={handleStoryPress} />
         </View>
       );
     }

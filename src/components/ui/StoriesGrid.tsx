@@ -12,12 +12,13 @@ export interface Story {
 
 export interface StoriesGridProps {
   stories: Story[];
+  onStoryPress?: (story: Story) => void;
 }
 
 /**
  * 3-column grid for displaying user stories (no FlatList)
  */
-export function StoriesGrid({ stories }: StoriesGridProps) {
+export function StoriesGrid({ stories, onStoryPress }: StoriesGridProps) {
   // Helper to chunk array into rows of 3
   function chunk<T>(arr: T[], size: number): T[][] {
     return Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
@@ -34,7 +35,12 @@ export function StoriesGrid({ stories }: StoriesGridProps) {
         <View key={rowIdx} className="mb-1 flex-row gap-1">
           {row.map((item, colIdx) =>
             item ? (
-              <TouchableOpacity key={item.id} className="aspect-square flex-1">
+              <TouchableOpacity
+                key={item.id}
+                className="aspect-square flex-1"
+                onPress={onStoryPress ? () => onStoryPress(item) : undefined}
+                disabled={!onStoryPress}
+              >
                 <Image
                   source={{ uri: item.media_url }}
                   className="h-full w-full rounded-md"

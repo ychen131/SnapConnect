@@ -27,6 +27,7 @@ type StoryViewerRouteParams = {
   avatarUrl?: string;
   usersWithStories: StoryViewerRouteParams[];
   userIndex: number;
+  storyIndex?: number;
 };
 
 interface Story {
@@ -41,7 +42,8 @@ interface Story {
 export default function StoryViewerScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<Record<string, StoryViewerRouteParams>, string>>();
-  const { userId, username, avatarUrl, usersWithStories, userIndex } = route.params || {};
+  const { userId, username, avatarUrl, usersWithStories, userIndex, storyIndex } =
+    route.params || {};
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export default function StoryViewerScreen() {
       : { id: userId, userId, username, avatarUrl },
   );
   const [currentUserStories, setCurrentUserStories] = useState<Story[]>([]);
-  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(storyIndex ?? 0);
 
   // Fetch stories for the current user
   useEffect(() => {
@@ -71,14 +73,12 @@ export default function StoryViewerScreen() {
         if (!userIdToFetch) {
           throw new Error('No user ID available');
         }
-
         const userStories = await getUserStories(userIdToFetch, false);
         const sortedStories = userStories
           .slice()
           .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         setCurrentUserStories(sortedStories);
-        setCurrentStoryIndex(0);
-
+        setCurrentStoryIndex(storyIndex ?? 0);
         // Clear story notifications for this user's stories
         userStories.forEach((story) => {
           clearStoryNotification(story.id);
@@ -91,7 +91,7 @@ export default function StoryViewerScreen() {
       }
     }
     if (currentUser && (currentUser.id || currentUser.userId)) fetchStoriesForUser();
-  }, [currentUser]);
+  }, [currentUser, storyIndex]);
 
   // Handle auto-advance for current user's stories
   useEffect(() => {
