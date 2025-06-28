@@ -6,6 +6,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import {
   analyzeDogImageWithValidation,
+  analyzeDogImageWithOptimization,
   VibeCheckRequest,
   VibeCheckResponse,
 } from '../services/vibeCheckService';
@@ -32,7 +33,7 @@ const initialState: VibeCheckState = {
   lastErrorType: null,
 };
 
-// Async thunk for performing a Vibe Check
+// Async thunk for performing a Vibe Check with base64 input (legacy)
 export const performVibeCheck = createAsyncThunk<
   VibeCheckResponse,
   VibeCheckRequest,
@@ -59,6 +60,49 @@ export const performVibeCheck = createAsyncThunk<
       errorMessage.includes('no dog detected') ||
       errorMessage.includes('image too small') ||
       errorMessage.includes('resolution')
+    ) {
+      errorType = 'validation';
+    } else if (
+      errorMessage.includes('500') ||
+      errorMessage.includes('internal server error') ||
+      errorMessage.includes('service temporarily unavailable')
+    ) {
+      errorType = 'api';
+    }
+
+    return rejectWithValue({ message: errorMessage, type: errorType });
+  }
+});
+
+// Async thunk for performing a Vibe Check with image optimization (new)
+export const performVibeCheckOptimized = createAsyncThunk<
+  VibeCheckResponse,
+  { imageUri: string; userId: string },
+  { rejectValue: { message: string; type: 'network' | 'api' | 'validation' | 'unknown' } }
+>('vibeCheck/performVibeCheckOptimized', async ({ imageUri, userId }, { rejectWithValue }) => {
+  try {
+    const result = await analyzeDogImageWithOptimization(imageUri, userId);
+    return result;
+  } catch (error) {
+    const errorMessage = (error as Error).message;
+
+    // Categorize errors based on message content
+    let errorType: 'network' | 'api' | 'validation' | 'unknown' = 'unknown';
+
+    if (
+      errorMessage.includes('network') ||
+      errorMessage.includes('connection') ||
+      errorMessage.includes('timeout') ||
+      errorMessage.includes('fetch')
+    ) {
+      errorType = 'network';
+    } else if (
+      errorMessage.includes('unsupported image format') ||
+      errorMessage.includes('no dog detected') ||
+      errorMessage.includes('image too small') ||
+      errorMessage.includes('resolution') ||
+      errorMessage.includes('compression') ||
+      errorMessage.includes('optimization')
     ) {
       errorType = 'validation';
     } else if (
@@ -125,6 +169,7 @@ const vibeCheckSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Handle both legacy and optimized thunks
       .addCase(performVibeCheck.pending, (state) => {
         state.status = 'loading';
         state.error = null;
@@ -140,6 +185,26 @@ const vibeCheckSlice = createSlice({
         state.lastErrorType = null;
       })
       .addCase(performVibeCheck.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload?.message || 'Vibe Check failed';
+        state.lastErrorType = action.payload?.type || 'unknown';
+      })
+      // Handle optimized thunk
+      .addCase(performVibeCheckOptimized.pending, (state) => {
+        state.status = 'loading';
+        state.error = null;
+      })
+      .addCase(performVibeCheckOptimized.fulfilled, (state, action) => {
+        state.shortSummary = action.payload.short_summary;
+        state.detailedReport = action.payload.detailed_report;
+        state.sourceURL = action.payload.sourceUrl;
+        state.confidence = action.payload.confidence;
+        state.status = 'succeeded';
+        state.error = null;
+        state.retryCount = 0;
+        state.lastErrorType = null;
+      })
+      .addCase(performVibeCheckOptimized.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload?.message || 'Vibe Check failed';
         state.lastErrorType = action.payload?.type || 'unknown';

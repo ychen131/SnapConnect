@@ -23,7 +23,7 @@ import { RootState } from '../../store';
 import { addToStory } from '../../services/storyService';
 import { uploadMediaToStorage } from '../../services/snapService';
 import { analyzeDogImageWithValidation } from '../../services/vibeCheckService';
-import { performVibeCheck } from '../../store/vibeCheckSlice';
+import { performVibeCheck, performVibeCheckOptimized } from '../../store/vibeCheckSlice';
 import { clearVibeCheck, getErrorInfo } from '../../store/vibeCheckSlice';
 import type { AppDispatch } from '../../store/store';
 import PhotoEditingToolbar from '../../components/camera/PhotoEditingToolbar';
@@ -161,6 +161,19 @@ export default function CameraScreen() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Preload the photo image when photoUri changes
+  useEffect(() => {
+    if (photoUri) {
+      Image.prefetch(photoUri)
+        .then(() => {
+          console.log('📸 Image preloaded:', photoUri);
+        })
+        .catch((err) => {
+          console.warn('⚠️ Failed to preload image:', photoUri, err);
+        });
+    }
+  }, [photoUri]);
 
   if (!permission) {
     return (
@@ -849,16 +862,11 @@ export default function CameraScreen() {
       setToastType('info');
       setToastVisible(true);
 
-      console.log('🔍 Starting Vibe Check...');
+      console.log('🔍 Starting Vibe Check with image optimization...');
 
-      // Convert image to base64
-      const base64Image = await FileSystem.readAsStringAsync(photoUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      // Dispatch Redux thunk
+      // Use the new optimized function that handles compression automatically
       const result = await dispatch(
-        performVibeCheck({ imageBase64: base64Image, userId: user.id }),
+        performVibeCheckOptimized({ imageUri: photoUri, userId: user.id }),
       ).unwrap();
 
       console.log('✅ Vibe Check completed:', result);
@@ -1132,6 +1140,7 @@ export default function CameraScreen() {
           onClose={() => setShowReport(false)}
           report={detailedReport || ''}
           photoUri={photoUri || undefined}
+          isLoading={status === 'loading'}
         />
       </View>
     );

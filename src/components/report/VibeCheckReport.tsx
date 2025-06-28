@@ -17,6 +17,7 @@ import {
   Alert,
   LayoutAnimation,
   UIManager,
+  ActivityIndicator,
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import * as FileSystem from 'expo-file-system';
@@ -33,12 +34,14 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
  * @param onClose Callback to close the modal
  * @param report The detailed markdown report
  * @param photoUri (optional) The user's photo to display at the top
+ * @param isLoading (optional) Whether the report is still loading
  */
 interface VibeCheckReportProps {
   visible: boolean;
   onClose: () => void;
   report: string;
   photoUri?: string;
+  isLoading?: boolean;
 }
 
 /**
@@ -94,6 +97,7 @@ export default function VibeCheckReport({
   onClose,
   report,
   photoUri,
+  isLoading = false,
 }: VibeCheckReportProps) {
   const [isPhotoModalVisible, setPhotoModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -182,27 +186,44 @@ export default function VibeCheckReport({
             </TouchableOpacity>
           </View>
 
-          {/* Expandable Markdown Sections */}
+          {/* Expandable Markdown Sections or Loading Spinner */}
           <ScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: 32 }}>
-            {sections.map((section, idx) => (
-              <View key={idx} style={styles.sectionContainer}>
-                <TouchableOpacity
-                  style={styles.sectionHeader}
-                  onPress={() => handleToggleSection(idx)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.sectionHeaderText}>
-                    {section.title}
-                    {expandedSection === idx ? ' ▼' : ' ▶'}
-                  </Text>
-                </TouchableOpacity>
-                {expandedSection === idx && (
-                  <View style={styles.sectionContent}>
-                    <Markdown style={markdownStyles}>{section.content}</Markdown>
-                  </View>
-                )}
+            {isLoading && !report && (
+              <View style={{ alignItems: 'center', marginTop: 32 }}>
+                <ActivityIndicator size="large" color="#FFD700" />
+                <Text style={{ marginTop: 16, color: '#bfa100', fontWeight: 'bold', fontSize: 16 }}>
+                  Generating your Vibe Check report...
+                </Text>
               </View>
-            ))}
+            )}
+            {!isLoading && !report && (
+              <View style={{ alignItems: 'center', marginTop: 32 }}>
+                <Text style={{ color: '#bfa100', fontWeight: 'bold', fontSize: 16 }}>
+                  No report available.
+                </Text>
+              </View>
+            )}
+            {report &&
+              !isLoading &&
+              sections.map((section, idx) => (
+                <View key={idx} style={styles.sectionContainer}>
+                  <TouchableOpacity
+                    style={styles.sectionHeader}
+                    onPress={() => handleToggleSection(idx)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.sectionHeaderText}>
+                      {section.title}
+                      {expandedSection === idx ? ' ▼' : ' ▶'}
+                    </Text>
+                  </TouchableOpacity>
+                  {expandedSection === idx && (
+                    <View style={styles.sectionContent}>
+                      <Markdown style={markdownStyles}>{section.content}</Markdown>
+                    </View>
+                  )}
+                </View>
+              ))}
           </ScrollView>
         </View>
 

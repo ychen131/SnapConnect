@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { optimizeImageForAPI, needsCompression, getImageInfo } from '../utils/imageCompression';
 
 // Request and response types
 export interface VibeCheckRequest {
@@ -104,6 +105,57 @@ export function validateImageQuality(imageBase64: string): ImageQualityValidatio
 }
 
 /**
+ * Optimizes and compresses an image before API analysis
+ * @param imageUri Path to the image file
+ * @param targetSizeMB Target file size in MB (default: 2MB)
+ * @returns Optimized base64 string and compression info
+ */
+export async function optimizeImageForVibeCheck(
+  imageUri: string,
+  targetSizeMB: number = 2,
+): Promise<{ base64: string; compressionInfo?: any }> {
+  try {
+    // Check if compression is needed
+    const shouldCompress = await needsCompression(imageUri, targetSizeMB);
+
+    if (!shouldCompress) {
+      // If no compression needed, just convert to base64
+      const base64 = await import('expo-file-system').then((fs) =>
+        fs.readAsStringAsync(imageUri, { encoding: fs.EncodingType.Base64 }),
+      );
+      return { base64 };
+    }
+
+    // Get original image info for logging
+    const originalInfo = await getImageInfo(imageUri);
+    console.log(
+      `📸 Original image: ${originalInfo.width}x${originalInfo.height}, ${originalInfo.sizeKB.toFixed(1)}KB`,
+    );
+
+    // Optimize image for API
+    const compressionResult = await optimizeImageForAPI(imageUri, targetSizeMB);
+
+    return {
+      base64: compressionResult.compressedBase64,
+      compressionInfo: {
+        originalSizeKB: compressionResult.originalSizeKB,
+        compressedSizeKB: compressionResult.compressedSizeKB,
+        compressionRatio: compressionResult.compressionRatio,
+        dimensions: compressionResult.dimensions,
+      },
+    };
+  } catch (error) {
+    console.error('Image optimization failed, falling back to original:', error);
+
+    // Fallback to original image if optimization fails
+    const base64 = await import('expo-file-system').then((fs) =>
+      fs.readAsStringAsync(imageUri, { encoding: fs.EncodingType.Base64 }),
+    );
+    return { base64 };
+  }
+}
+
+/**
  * Calls the Supabase Edge Function to analyze a dog image.
  * @param imageBase64 - Base64 encoded image string
  * @param userId - User ID for the request
@@ -164,6 +216,47 @@ export async function analyzeDogImage(
   }
 
   return data as VibeCheckResponse;
+}
+
+/**
+ * Enhanced analyzeDogImage with image quality validation and compression optimization
+ * @param imageUri Path to the image file (not base64)
+ * @param userId User identifier
+ * @returns Promise with vibe check analysis result
+ */
+export async function analyzeDogImageWithOptimization(
+  imageUri: string,
+  userId: string,
+): Promise<VibeCheckResponse> {
+  try {
+    // Optimize image before API call
+    const { base64: optimizedBase64, compressionInfo } = await optimizeImageForVibeCheck(imageUri);
+
+    // Log compression results if available
+    if (compressionInfo) {
+      console.log(
+        `🚀 Image optimized for API: ${compressionInfo.compressionRatio < 1 ? '✅' : '⚠️'} ${compressionInfo.originalSizeKB.toFixed(1)}KB → ${compressionInfo.compressedSizeKB.toFixed(1)}KB`,
+      );
+    }
+
+    // Validate optimized image
+    const validation = validateImageQuality(optimizedBase64);
+
+    if (!validation.isValid) {
+      throw new Error(`Image quality validation failed: ${validation.errors.join(', ')}`);
+    }
+
+    // Show warnings if any
+    if (validation.warnings.length > 0) {
+      console.warn('Image quality warnings:', validation.warnings);
+    }
+
+    // Proceed with analysis using optimized image
+    return analyzeDogImage(optimizedBase64, userId);
+  } catch (error) {
+    console.error('Vibe Check with optimization failed:', error);
+    throw error;
+  }
 }
 
 /**
