@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import * as fs from 'fs';
 import * as path from 'path';
 import dotenv from 'dotenv';
+import { analyzeDogImage } from '../src/services/vibeCheckService';
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
@@ -77,3 +78,25 @@ testVibeCheckFunction()
     console.error('❌ Test failed:', error);
     process.exit(1);
   });
+
+/**
+ * Reads the base64 image string from a file.
+ * @param filePath Path to the file containing the base64 string
+ */
+function readBase64Image(filePath: string): string {
+  return fs.readFileSync(filePath, 'utf-8').trim();
+}
+
+async function testAnalyzeDogImage() {
+  const base64Image = readBase64Image('image64.txt');
+  const userId = 'test-user-id'; // Replace with a real user ID if needed
+
+  try {
+    const result = await analyzeDogImage(base64Image, userId);
+    console.log('Vibe Check Result:', result);
+  } catch (error) {
+    console.error('Error from analyzeDogImage:', error);
+  }
+}
+
+testAnalyzeDogImage();
