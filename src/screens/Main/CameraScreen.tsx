@@ -40,6 +40,7 @@ import * as FileSystem from 'expo-file-system';
 import { ImageFormat } from '@shopify/react-native-skia';
 import Toast from '../../components/ui/Toast';
 import VibeCheckSticker from '../../components/editor/VibeCheckSticker';
+import VibeCheckReport from '../../components/report/VibeCheckReport';
 
 type CameraScreenNavigationProp = NativeStackNavigationProp<CameraStackParamList, 'CameraMain'>;
 
@@ -109,6 +110,7 @@ export default function CameraScreen() {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'info' | 'success' | 'error'>('info');
+  const [showReport, setShowReport] = useState(false);
 
   // Initialize history when a photo is taken
   useEffect(() => {
@@ -1018,13 +1020,18 @@ export default function CameraScreen() {
         {photoUri && vibeCheckResult?.short_summary && (
           <VibeCheckSticker
             summary={vibeCheckResult.short_summary}
-            onLearnWhy={() => {
-              // Placeholder: show alert for now
-              Alert.alert('Vibe Check Report', 'Show detailed report here!');
-            }}
+            onLearnWhy={() => setShowReport(true)}
             initialPosition={{ x: 100, y: 200 }}
           />
         )}
+
+        {/* Vibe Check Report Modal */}
+        <VibeCheckReport
+          visible={showReport}
+          onClose={() => setShowReport(false)}
+          report={vibeCheckResult?.detailed_report || ''}
+          photoUri={photoUri || undefined}
+        />
       </View>
     );
   }

@@ -216,22 +216,34 @@ Based on the vision analysis and the scientific knowledge base content, provide 
 ## 🐕 VIBE CHECK REPORT
 
 ### Emotional State Assessment
+
 [Analyze the dog's likely emotional state based on visual cues]
 
 ### Body Language Breakdown
+
 [Detail specific body language indicators and their meanings]
 
 ### Behavioral Context
+
 [What might be happening in this situation?]
 
 ### Comfort & Well-being Level
+
 [Rate comfort level and explain indicators]
 
 ### Scientific Backing
+
 [Reference specific knowledge base content to support your analysis]
 
 ### Recommendations
+
 [Provide actionable advice for the dog's well-being or interaction]
+
+**IMPORTANT:**
+- Each header (lines starting with ## or ###) must be on its own line, with a blank line before and after.
+- Each paragraph must start on a new line after its header, with a blank line before the next header.
+- Never split words or headers across lines. Never output stray single letters or broken words.
+- The markdown must be valid and render cleanly in any markdown viewer.
 
 Make the detailed report:
 - Friendly and accessible to dog owners
