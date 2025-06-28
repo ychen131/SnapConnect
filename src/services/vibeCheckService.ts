@@ -118,11 +118,51 @@ export async function analyzeDogImage(
   });
 
   if (error) {
-    throw new Error(`API call failed: ${error.message}`);
+    // Parse the error message to provide user-friendly feedback
+    const errorMessage = error.message || 'Unknown error occurred';
+
+    // Check for specific error patterns and provide user-friendly messages
+    if (
+      errorMessage.includes('unsupported image format') ||
+      errorMessage.includes('image format')
+    ) {
+      throw new Error('The image format is not supported. Please try a JPEG or PNG photo.');
+    }
+
+    if (errorMessage.includes('no dog detected') || errorMessage.includes('dog not found')) {
+      throw new Error(
+        'No dog detected in the photo. Please make sure your dog is clearly visible in the image.',
+      );
+    }
+
+    if (errorMessage.includes('image too small') || errorMessage.includes('resolution')) {
+      throw new Error('The image is too small or blurry. Please try a higher quality photo.');
+    }
+
+    if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+      throw new Error(
+        'Network connection issue. Please check your internet connection and try again.',
+      );
+    }
+
+    if (errorMessage.includes('timeout') || errorMessage.includes('request timeout')) {
+      throw new Error(
+        'Request timed out. Please try again with a smaller image or better connection.',
+      );
+    }
+
+    if (errorMessage.includes('500') || errorMessage.includes('internal server error')) {
+      throw new Error('Service temporarily unavailable. Please try again in a few moments.');
+    }
+
+    // For any other errors, provide a generic but helpful message
+    throw new Error(`Unable to analyze the photo: ${errorMessage}`);
   }
+
   if (!data) {
-    throw new Error('No response data received from API');
+    throw new Error('No response received from the analysis service. Please try again.');
   }
+
   return data as VibeCheckResponse;
 }
 

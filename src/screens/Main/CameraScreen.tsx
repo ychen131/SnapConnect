@@ -871,15 +871,20 @@ export default function CameraScreen() {
           <TouchableOpacity
             className="rounded-full bg-black/50 p-3"
             onPress={() => {
-              if (editModeBackup) {
-                setCurrentFilter(editModeBackup.filter);
-                setTextOverlays(editModeBackup.overlays);
-              }
+              // Reset all relevant state to return to camera view
+              setPhotoUri(null);
+              setVideoUri(null);
+              setVibeCheckResult(null);
+              setVibeCheckError(null);
+              setIsVibeChecking(false);
+              setShowReport(false);
               setIsEditMode(false);
               setSelectedTextId(null);
               setIsTextModalVisible(false);
               setEditingOverlay(null);
               setEditModeBackup(null);
+              setTextOverlays([]);
+              setCurrentFilter('original');
             }}
             accessibilityLabel="Close"
           >
@@ -1016,12 +1021,16 @@ export default function CameraScreen() {
           onHide={() => setToastVisible(false)}
         />
 
-        {/* Vibe Check Sticker (show after successful Vibe Check) */}
-        {photoUri && vibeCheckResult?.short_summary && (
+        {/* Vibe Check Sticker (show after Vibe Check attempt - success or error) */}
+        {photoUri && (vibeCheckResult?.short_summary || vibeCheckError) && (
           <VibeCheckSticker
-            summary={vibeCheckResult.short_summary}
+            summary={vibeCheckResult?.short_summary || 'Vibe Check failed'}
             onLearnWhy={() => setShowReport(true)}
             initialPosition={{ x: 100, y: 200 }}
+            isLoading={isVibeChecking}
+            error={vibeCheckError || undefined}
+            onRetry={handleVibeCheckPress}
+            photoUri={photoUri}
           />
         )}
 
@@ -1146,6 +1155,7 @@ export default function CameraScreen() {
         mode="video"
         mute={true}
         mirror={facing === 'front'}
+        zoom={facing === 'back' ? 0.05 : 0}
       />
       {/* Overlay UI */}
       {/* Flip Camera Button */}
