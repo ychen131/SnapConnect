@@ -22,6 +22,7 @@ import type { CameraStackParamList } from '../../navigation/types';
 import { RootState } from '../../store';
 import { addToStory } from '../../services/storyService';
 import { uploadMediaToStorage } from '../../services/snapService';
+import { analyzeDogImageWithValidation } from '../../services/vibeCheckService';
 import PhotoEditingToolbar from '../../components/camera/PhotoEditingToolbar';
 import TextOverlay from '../../components/camera/TextOverlay';
 import TextEditModal from '../../components/camera/TextEditModal';
@@ -37,6 +38,8 @@ import {
 import FilteredImage from '../../components/camera/FilteredImage';
 import * as FileSystem from 'expo-file-system';
 import { ImageFormat } from '@shopify/react-native-skia';
+import Toast from '../../components/ui/Toast';
+import VibeCheckSticker from '../../components/editor/VibeCheckSticker';
 
 type CameraScreenNavigationProp = NativeStackNavigationProp<CameraStackParamList, 'CameraMain'>;
 
@@ -98,6 +101,14 @@ export default function CameraScreen() {
     filter: FilterType;
     overlays: TextOverlayType[];
   } | null>(null);
+
+  // Vibe Check state
+  const [isVibeChecking, setIsVibeChecking] = useState(false);
+  const [vibeCheckResult, setVibeCheckResult] = useState<any>(null);
+  const [vibeCheckError, setVibeCheckError] = useState<string | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'info' | 'success' | 'error'>('info');
 
   // Initialize history when a photo is taken
   useEffect(() => {
@@ -321,7 +332,12 @@ export default function CameraScreen() {
 
   function handleTextModalDelete() {
     if (editingOverlay) {
-      handleTextDelete(editingOverlay.id);
+      const updatedOverlays = textOverlays.filter((overlay) => overlay.id !== editingOverlay.id);
+      setTextOverlays(updatedOverlays);
+      pushEditState({
+        filter: currentFilter,
+        textOverlays: updatedOverlays,
+      });
       setIsTextModalVisible(false);
       setEditingOverlay(null);
     }
@@ -774,6 +790,53 @@ export default function CameraScreen() {
     setIsEditMode(true);
   }
 
+  // Vibe Check handler
+  async function handleVibeCheckPress() {
+    if (!photoUri || !user?.id) {
+      console.log('❌ No photo or user available for Vibe Check');
+      return;
+    }
+
+    try {
+      setIsVibeChecking(true);
+      setVibeCheckError(null);
+      setVibeCheckResult(null);
+
+      // Show loading toast
+      setToastMessage("Checking your pup's vibe... 🐾");
+      setToastType('info');
+      setToastVisible(true);
+
+      console.log('🔍 Starting Vibe Check...');
+
+      // Convert image to base64
+      const base64Image = await FileSystem.readAsStringAsync(photoUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Call Vibe Check service
+      const result = await analyzeDogImageWithValidation(base64Image, user.id);
+
+      console.log('✅ Vibe Check completed:', result);
+      setVibeCheckResult(result);
+
+      // Show success toast
+      setToastMessage(`Vibe Check Complete! ${result.short_summary}`);
+      setToastType('success');
+      setToastVisible(true);
+    } catch (error) {
+      console.error('❌ Vibe Check failed:', error);
+      setVibeCheckError((error as Error).message);
+
+      // Show error toast
+      setToastMessage(`Vibe Check Failed: ${(error as Error).message}`);
+      setToastType('error');
+      setToastVisible(true);
+    } finally {
+      setIsVibeChecking(false);
+    }
+  }
+
   // Enhanced Photo Preview Screen
   if (photoUri) {
     return (
@@ -821,7 +884,24 @@ export default function CameraScreen() {
             <Text className="text-lg font-bold text-white">✕</Text>
           </TouchableOpacity>
 
-          <View className="flex-row space-x-2">
+          <View className="flex-row items-center space-x-2">
+            {/* Vibe Check Button */}
+            <TouchableOpacity
+              className="flex-row items-center rounded-full bg-yellow-400 px-4 py-2"
+              onPress={handleVibeCheckPress}
+              disabled={isVibeChecking}
+              accessibilityLabel="Vibe Check"
+            >
+              {isVibeChecking ? (
+                <ActivityIndicator size="small" color="black" />
+              ) : (
+                <Text className="text-lg font-bold" style={{ marginRight: 4 }}>
+                  🐾
+                </Text>
+              )}
+              <Text className="font-bold text-black">Vibe Check</Text>
+            </TouchableOpacity>
+
             {/* Edit Button */}
             <TouchableOpacity
               className="rounded-full bg-black/50 px-4 py-2"
@@ -901,6 +981,7 @@ export default function CameraScreen() {
           isVisible={isEditMode}
           onFilterPress={handleFilterPress}
           onTextPress={handleTextPress}
+          onVibeCheckPress={handleVibeCheckPress}
           onUndoPress={handleUndoPress}
           onRedoPress={handleRedoPress}
           onResetPress={handleResetPress}
@@ -909,6 +990,7 @@ export default function CameraScreen() {
           canRedo={canRedo}
           hasEdits={hasEdits}
           isSaving={isSaving}
+          isVibeChecking={isVibeChecking}
           selectedFilter={currentFilter}
           onFilterSelect={handleFilterSelect}
           imageUri={photoUri || undefined}
@@ -922,6 +1004,27 @@ export default function CameraScreen() {
           onCancel={handleTextModalCancel}
           onDelete={handleTextModalDelete}
         />
+
+        {/* Toast Notifications */}
+        <Toast
+          visible={toastVisible}
+          message={toastMessage}
+          type={toastType}
+          duration={toastType === 'info' ? 2000 : 4000}
+          onHide={() => setToastVisible(false)}
+        />
+
+        {/* Vibe Check Sticker (show after successful Vibe Check) */}
+        {photoUri && vibeCheckResult?.short_summary && (
+          <VibeCheckSticker
+            summary={vibeCheckResult.short_summary}
+            onLearnWhy={() => {
+              // Placeholder: show alert for now
+              Alert.alert('Vibe Check Report', 'Show detailed report here!');
+            }}
+            initialPosition={{ x: 100, y: 200 }}
+          />
+        )}
       </View>
     );
   }
@@ -999,6 +1102,7 @@ export default function CameraScreen() {
           isVisible={isEditMode}
           onFilterPress={handleFilterPress}
           onTextPress={handleTextPress}
+          onVibeCheckPress={handleVibeCheckPress}
           onUndoPress={handleUndoPress}
           onRedoPress={handleRedoPress}
           onResetPress={handleResetPress}
@@ -1007,9 +1111,19 @@ export default function CameraScreen() {
           canRedo={canRedo}
           hasEdits={hasEdits}
           isSaving={isSaving}
+          isVibeChecking={isVibeChecking}
           selectedFilter={currentFilter}
           onFilterSelect={handleFilterSelect}
           imageUri={photoUri || undefined}
+        />
+
+        {/* Toast Notifications */}
+        <Toast
+          visible={toastVisible}
+          message={toastMessage}
+          type={toastType}
+          duration={toastType === 'info' ? 2000 : 4000}
+          onHide={() => setToastVisible(false)}
         />
       </View>
     );

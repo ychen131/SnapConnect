@@ -21,6 +21,7 @@ interface PhotoEditingToolbarProps {
   isVisible: boolean;
   onFilterPress: () => void;
   onTextPress: () => void;
+  onVibeCheckPress: () => void;
   onUndoPress: () => void;
   onRedoPress: () => void;
   onResetPress: () => void;
@@ -29,6 +30,7 @@ interface PhotoEditingToolbarProps {
   canRedo: boolean;
   hasEdits: boolean;
   isSaving?: boolean;
+  isVibeChecking?: boolean;
   // Filter-related props
   selectedFilter: FilterType;
   onFilterSelect: (filter: FilterType) => void;
@@ -37,12 +39,13 @@ interface PhotoEditingToolbarProps {
 
 /**
  * Photo editing toolbar with horizontal scrollable layout
- * Contains buttons for filters, text overlays, undo/redo, and reset
+ * Contains buttons for filters, text overlays, vibe check, undo/redo, and reset
  */
 export default function PhotoEditingToolbar({
   isVisible,
   onFilterPress,
   onTextPress,
+  onVibeCheckPress,
   onUndoPress,
   onRedoPress,
   onResetPress,
@@ -51,6 +54,7 @@ export default function PhotoEditingToolbar({
   canRedo,
   hasEdits,
   isSaving,
+  isVibeChecking,
   selectedFilter,
   onFilterSelect,
   imageUri,
@@ -113,6 +117,20 @@ export default function PhotoEditingToolbar({
         <TouchableOpacity style={styles.toolButton} onPress={onTextPress}>
           <Text style={styles.toolIcon}>T</Text>
           <Text style={styles.toolLabel}>Text</Text>
+        </TouchableOpacity>
+
+        {/* Vibe Check Button */}
+        <TouchableOpacity
+          style={[styles.toolButton, isVibeChecking && styles.disabledButton]}
+          onPress={onVibeCheckPress}
+          disabled={isVibeChecking}
+        >
+          {isVibeChecking ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text style={styles.toolIcon}>🐾</Text>
+          )}
+          <Text style={[styles.toolLabel, isVibeChecking && styles.disabledIcon]}>Vibe</Text>
         </TouchableOpacity>
 
         {/* Reset Button */}
