@@ -10,9 +10,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import { RootState } from '../../store';
 import { getFriendsWithActiveStories, getUserStories } from '../../services/storyService';
 import { clearAllStoryNotifications } from '../../services/realtimeService';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useNavigationState } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { StoriesStackParamList } from '../../navigation/types';
+import type { MainTabParamList } from '../../navigation/types';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import Avatar from '../../components/ui/Avatar';
+import { StackActions } from '@react-navigation/native';
 
 function StoryAvatar({ id, username, avatarUrl, isOwn, hasStory, isNew, onPress, ...props }: any) {
   if (!username) {
@@ -26,31 +30,26 @@ function StoryAvatar({ id, username, avatarUrl, isOwn, hasStory, isNew, onPress,
     });
   }
   const displayName = typeof username === 'string' && username.length > 0 ? username : 'U';
+
+  // Determine border color based on story status
+  let borderColor = '#E5E7EB'; // Default gray
+  if (isOwn && hasStory) {
+    borderColor = '#FF8C69'; // Brand color for own story
+  } else if (isNew) {
+    borderColor = '#FF8C69'; // Brand color for new stories
+  }
+
   return (
     <TouchableOpacity className="mx-2 items-center" onPress={onPress}>
-      <View
-        className={`h-16 w-16 items-center justify-center rounded-full border-4 ${
-          isOwn
-            ? hasStory
-              ? 'border-brand'
-              : 'border-gray-300'
-            : isNew
-              ? 'border-brand'
-              : 'border-gray-300'
-        } bg-gray-200`}
-      >
-        {/* Placeholder for avatar image */}
-        {avatarUrl ? (
-          // TODO: Replace with <Image source={{ uri: avatarUrl }} ... />
-          <Text className="font-heading text-2xl font-bold text-muted">
-            {displayName.charAt(0).toUpperCase()}
-          </Text>
-        ) : (
-          <Text className="font-heading text-2xl font-bold text-muted">
-            {displayName.charAt(0).toUpperCase()}
-          </Text>
-        )}
-      </View>
+      <Avatar
+        avatarUrl={avatarUrl}
+        username={displayName}
+        size={64}
+        borderColor={borderColor}
+        borderWidth={4}
+        backgroundColor={hasStory ? '#FF8C69' : '#E5E7EB'}
+        textColor={hasStory ? '#FFFFFF' : '#6B7280'}
+      />
       <Text className="mt-2 w-16 text-center font-heading text-xs" numberOfLines={1}>
         {isOwn ? (hasStory ? 'Your Story' : 'Add Story') : displayName}
       </Text>
@@ -66,6 +65,7 @@ export default function StoriesScreen() {
   const [stories, setStories] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const navigation = useNavigation<NativeStackNavigationProp<StoriesStackParamList>>();
+  const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
 
   async function fetchStories() {
     if (!user?.id) return;
@@ -82,7 +82,7 @@ export default function StoriesScreen() {
         {
           id: 'me',
           username: user.username,
-          avatarUrl: '',
+          avatarUrl: user.avatar_url || '', // Use user's own avatar
           isOwn: true,
           hasStory: hasMyStory,
         },
@@ -108,7 +108,7 @@ export default function StoriesScreen() {
 
   useEffect(() => {
     fetchStories();
-  }, [user?.id]);
+  }, [user?.id, user?.avatar_url]); // Also update if avatar changes
 
   // Refresh stories when screen comes into focus (e.g., returning from story viewer)
   useFocusEffect(
@@ -165,16 +165,20 @@ export default function StoriesScreen() {
               <StoryAvatar
                 {...item}
                 onPress={() => {
-                  if (!item.hasStory) return;
-                  const realId = item.isOwn ? user?.id : item.id;
-                  const userIndex = usersWithStories.findIndex((u) => u.id === realId);
-                  navigation.navigate('StoryViewer', {
-                    userId: realId,
-                    username: item.username,
-                    avatarUrl: item.avatarUrl,
-                    usersWithStories,
-                    userIndex,
-                  });
+                  if (item.isOwn) {
+                    // Switch to Camera tab and show CameraMain
+                    tabNavigation.navigate('Camera', { screen: 'CameraMain' });
+                  } else if (item.hasStory) {
+                    const realId = item.isOwn ? user?.id : item.id;
+                    const userIndex = usersWithStories.findIndex((u) => u.id === realId);
+                    navigation.navigate('StoryViewer', {
+                      userId: realId,
+                      username: item.username,
+                      avatarUrl: item.avatarUrl,
+                      usersWithStories,
+                      userIndex,
+                    });
+                  }
                 }}
               />
             )}

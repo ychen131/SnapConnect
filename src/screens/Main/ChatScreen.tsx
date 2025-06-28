@@ -23,6 +23,7 @@ import {
 } from '../../services/realtimeService';
 import { clearAllMessageNotifications as clearAllMessageNotificationsSlice } from '../../store/realtimeSlice';
 import DebugInfo from '../../components/DebugInfo';
+import Avatar from '../../components/ui/Avatar';
 
 /**
  * Displays a list of chat conversations for the current user
@@ -86,10 +87,6 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
       }
     };
 
-    const getAvatarText = () => {
-      return item.other_user_username.charAt(0).toUpperCase();
-    };
-
     // Check for realtime notifications for this conversation
     const notification = realtimeState.newMessageNotifications.find(
       (n) => n.conversationId === item.id,
@@ -104,14 +101,22 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
         className="flex-row items-center border-b border-gray-200 bg-white p-4"
       >
         {/* Avatar */}
-        <View className="mr-3 h-12 w-12 items-center justify-center rounded-full bg-brand">
-          {item.other_user_avatar_url ? (
-            <Text className="font-heading text-lg font-semibold text-white">
-              {/* TODO: Add Image component for avatar */}
-              {getAvatarText()}
-            </Text>
-          ) : (
-            <Text className="font-heading text-lg font-semibold text-white">{getAvatarText()}</Text>
+        <View className="relative mr-3">
+          <Avatar
+            avatarUrl={item.other_user_avatar_url}
+            username={item.other_user_username}
+            size={48}
+            backgroundColor="#FF8C69"
+            textColor="#FFFFFF"
+          />
+
+          {/* Unread Badge - combine database count with realtime notifications */}
+          {showBadge && (
+            <View className="absolute -right-1 -top-1 h-5 min-w-[20px] items-center justify-center rounded-full bg-error">
+              <Text className="font-heading text-xs font-semibold text-white">
+                {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+              </Text>
+            </View>
           )}
         </View>
 
@@ -130,15 +135,6 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
             <Text className="flex-1 font-heading text-sm text-muted" numberOfLines={1}>
               {getLastMessagePreview()}
             </Text>
-
-            {/* Unread Badge - combine database count with realtime notifications */}
-            {showBadge && (
-              <View className="ml-2 h-5 min-w-[20px] items-center justify-center rounded-full bg-error">
-                <Text className="font-heading text-xs font-semibold text-white">
-                  {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                </Text>
-              </View>
-            )}
           </View>
         </View>
       </TouchableOpacity>
