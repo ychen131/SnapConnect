@@ -56,6 +56,8 @@ interface VibeCheckReportProps {
 function preprocessMarkdown(markdown: string): string {
   return (
     markdown
+      // Insert a newline before every '###' header to ensure proper splitting
+      .replace(/(?!^)### /g, '\n### ')
       // Convert <br> tags to line breaks
       .replace(/<br>/gi, '\n\n')
   );
@@ -328,17 +330,19 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
-    gap: 16,
+    gap: 12,
+    paddingHorizontal: 12,
   },
   actionButton: {
     backgroundColor: '#FFD700',
     borderRadius: 16,
     paddingVertical: 8,
-    paddingHorizontal: 20,
-    marginHorizontal: 8,
+    paddingHorizontal: 16,
+    marginHorizontal: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
