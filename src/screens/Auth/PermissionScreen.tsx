@@ -75,39 +75,43 @@ export default function PermissionScreen({ navigation }: { navigation: any }) {
       <View className="min-h-screen items-center justify-center px-6 py-8">
         <Card className="w-full max-w-sm rounded-lg bg-white p-6 shadow-sm">
           <View className="mb-6 items-center">
-            <Text className="mb-2 text-center text-3xl font-bold text-purple-600">
+            <Text className="mb-2 text-center font-heading text-3xl font-bold text-brand">
               Welcome to SnapDog!
             </Text>
-            <Text className="text-center text-base text-gray-600">
+            <Text className="text-center font-heading text-base text-muted">
               To get the full SnapDog experience, we need a few permissions.
             </Text>
           </View>
 
           <View className="mb-6 space-y-4">
             <View className="flex-row items-center space-x-3">
-              <View className="h-8 w-8 items-center justify-center rounded-full bg-purple-100">
-                <Text className="font-bold text-purple-600">📷</Text>
+              <View className="h-8 w-8 items-center justify-center rounded-full bg-brand-light">
+                <Text className="font-bold text-brand">📷</Text>
               </View>
               <View className="flex-1">
-                <Text className="font-semibold text-gray-800">Camera Access</Text>
-                <Text className="text-sm text-gray-600">Take photos and record videos</Text>
+                <Text className="text-text-primary font-heading font-semibold">Camera Access</Text>
+                <Text className="font-heading text-sm text-muted">
+                  Take photos and record videos
+                </Text>
               </View>
             </View>
 
             <View className="flex-row items-center space-x-3">
-              <View className="h-8 w-8 items-center justify-center rounded-full bg-purple-100">
-                <Text className="font-bold text-purple-600">🎤</Text>
+              <View className="h-8 w-8 items-center justify-center rounded-full bg-brand-light">
+                <Text className="font-bold text-brand">🎤</Text>
               </View>
               <View className="flex-1">
-                <Text className="font-semibold text-gray-800">Microphone Access</Text>
-                <Text className="text-sm text-gray-600">Record videos with sound</Text>
+                <Text className="text-text-primary font-heading font-semibold">
+                  Microphone Access
+                </Text>
+                <Text className="font-heading text-sm text-muted">Record videos with sound</Text>
               </View>
             </View>
           </View>
 
           {permissionStatus === 'granted' && (
             <View className="mb-4 rounded-lg bg-green-50 p-3">
-              <Text className="text-center font-medium text-green-700">
+              <Text className="text-center font-heading font-medium text-success">
                 ✅ Permissions granted! Setting up your experience...
               </Text>
             </View>
@@ -115,7 +119,7 @@ export default function PermissionScreen({ navigation }: { navigation: any }) {
 
           {permissionStatus === 'denied' && (
             <View className="mb-4 rounded-lg bg-yellow-50 p-3">
-              <Text className="text-center font-medium text-yellow-700">
+              <Text className="text-center font-heading font-medium text-yellow-700">
                 ⚠️ Some permissions were denied. You can still use the app with limited features.
               </Text>
             </View>
@@ -137,7 +141,7 @@ export default function PermissionScreen({ navigation }: { navigation: any }) {
             />
           </View>
 
-          <Text className="mt-4 text-center text-xs text-gray-500">
+          <Text className="mt-4 text-center font-heading text-xs text-muted">
             You can change these permissions anytime in your device settings.
           </Text>
         </Card>

@@ -164,7 +164,9 @@ export default function SnapVideoViewer({ navigation, route }: SnapVideoViewerPr
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: 'white', fontSize: 18, marginBottom: 20 }}>{error}</Text>
+          <Text style={{ color: 'white', fontSize: 18, marginBottom: 20, fontFamily: 'Nunito' }}>
+            {error}
+          </Text>
           <TouchableOpacity
             style={{
               backgroundColor: 'rgba(255,255,255,0.2)',
@@ -174,7 +176,7 @@ export default function SnapVideoViewer({ navigation, route }: SnapVideoViewerPr
             }}
             onPress={handleClose}
           >
-            <Text style={{ color: 'white', fontSize: 16 }}>Close</Text>
+            <Text style={{ color: 'white', fontSize: 16, fontFamily: 'Nunito' }}>Close</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -213,7 +215,7 @@ export default function SnapVideoViewer({ navigation, route }: SnapVideoViewerPr
               transform: [{ translateX: -20 }, { translateY: -20 }],
             }}
           >
-            <Text style={{ color: 'white', fontSize: 16 }}>Loading...</Text>
+            <Text style={{ color: 'white', fontSize: 16, fontFamily: 'Nunito' }}>Loading...</Text>
           </View>
         )}
 
@@ -234,7 +236,7 @@ export default function SnapVideoViewer({ navigation, route }: SnapVideoViewerPr
               style={{
                 width: `${progressPercentage}%`,
                 height: '100%',
-                backgroundColor: 'white',
+                backgroundColor: '#FF8C69',
                 borderRadius: 2,
               }}
             />
@@ -254,7 +256,7 @@ export default function SnapVideoViewer({ navigation, route }: SnapVideoViewerPr
               paddingVertical: 6,
             }}
           >
-            <Text style={{ color: 'white', fontSize: 16 }}>
+            <Text style={{ color: 'white', fontSize: 16, fontFamily: 'Nunito' }}>
               {formatTime(progress)} / {formatTime(duration)}
             </Text>
           </View>
@@ -276,7 +278,7 @@ export default function SnapVideoViewer({ navigation, route }: SnapVideoViewerPr
           onPress={handleReply}
           activeOpacity={0.8}
         >
-          <Text style={{ color: 'white', fontSize: 20 }}>💬</Text>
+          <Text style={{ color: 'white', fontSize: 20, fontFamily: 'Nunito' }}>💬</Text>
         </TouchableOpacity>
 
         {/* Play/Pause Indicator */}
@@ -292,7 +294,9 @@ export default function SnapVideoViewer({ navigation, route }: SnapVideoViewerPr
               paddingVertical: 6,
             }}
           >
-            <Text style={{ color: 'white', fontSize: 16 }}>{isPlaying ? '▶️' : '⏸️'}</Text>
+            <Text style={{ color: 'white', fontSize: 16, fontFamily: 'Nunito' }}>
+              {isPlaying ? '▶️' : '⏸️'}
+            </Text>
           </View>
         )}
       </TouchableOpacity>

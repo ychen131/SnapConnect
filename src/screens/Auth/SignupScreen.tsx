@@ -178,10 +178,12 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
     <ScrollView className="flex-1 bg-gray-50">
       <View className="min-h-screen items-center justify-center px-6 py-8">
         <Card className="w-full max-w-sm rounded-lg bg-white p-6 shadow-sm">
-          <Text className="mb-4 text-center text-2xl font-bold text-purple-600">
+          <Text className="mb-4 text-center font-heading text-2xl font-bold text-brand">
             Create Account
           </Text>
-          <Text className="mb-6 text-center text-base text-gray-600">Join SnapDog today</Text>
+          <Text className="mb-6 text-center font-heading text-base text-muted">
+            Join SnapDog today
+          </Text>
 
           <Input
             placeholder="Email"

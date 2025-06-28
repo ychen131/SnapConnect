@@ -103,37 +103,37 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
         className="flex-row items-center border-b border-gray-200 bg-white p-4"
       >
         {/* Avatar */}
-        <View className="mr-3 h-12 w-12 items-center justify-center rounded-full bg-blue-500">
+        <View className="mr-3 h-12 w-12 items-center justify-center rounded-full bg-brand">
           {item.other_user_avatar_url ? (
-            <Text className="text-lg font-semibold text-white">
+            <Text className="font-heading text-lg font-semibold text-white">
               {/* TODO: Add Image component for avatar */}
               {getAvatarText()}
             </Text>
           ) : (
-            <Text className="text-lg font-semibold text-white">{getAvatarText()}</Text>
+            <Text className="font-heading text-lg font-semibold text-white">{getAvatarText()}</Text>
           )}
         </View>
 
         {/* Conversation Info */}
         <View className="flex-1">
           <View className="flex-row items-center justify-between">
-            <Text className="text-base font-semibold text-gray-900">
+            <Text className="text-text-primary font-heading text-base font-semibold">
               {item.other_user_username}
             </Text>
-            <Text className="text-sm text-gray-500">
+            <Text className="font-heading text-sm text-muted">
               {new Date(item.last_message_at).toLocaleDateString()}
             </Text>
           </View>
 
           <View className="mt-1 flex-row items-center justify-between">
-            <Text className="flex-1 text-sm text-gray-600" numberOfLines={1}>
+            <Text className="flex-1 font-heading text-sm text-muted" numberOfLines={1}>
               {getLastMessagePreview()}
             </Text>
 
             {/* Unread Badge - combine database count with realtime notifications */}
             {showBadge && (
-              <View className="ml-2 h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500">
-                <Text className="text-xs font-semibold text-white">
+              <View className="ml-2 h-5 min-w-[20px] items-center justify-center rounded-full bg-error">
+                <Text className="font-heading text-xs font-semibold text-white">
                   {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
                 </Text>
               </View>
@@ -150,8 +150,10 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
   function renderEmptyState() {
     return (
       <View className="flex-1 items-center justify-center p-8">
-        <Text className="mb-2 text-center text-lg text-gray-500">No conversations yet</Text>
-        <Text className="text-center text-sm text-gray-400">
+        <Text className="mb-2 text-center font-heading text-lg text-muted">
+          No conversations yet
+        </Text>
+        <Text className="text-center font-heading text-sm text-muted">
           Start sending snaps to friends to see your conversations here!
         </Text>
       </View>
@@ -165,7 +167,7 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
     if (!realtimeState.isConnected) {
       return (
         <View className="bg-yellow-100 px-4 py-2">
-          <Text className="text-center text-sm text-yellow-800">
+          <Text className="text-center font-heading text-sm text-yellow-800">
             🔌 Connecting to real-time updates...
           </Text>
         </View>

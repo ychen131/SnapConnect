@@ -244,9 +244,9 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
         case 'photo':
           return (
             <View className="rounded-lg bg-gray-200 p-2">
-              <Text className="text-sm text-gray-600">📸 Photo</Text>
+              <Text className="font-heading text-sm text-muted">📸 Photo</Text>
               {item.timer && (
-                <Text className="mt-1 text-xs text-gray-500">Timer: {item.timer}s</Text>
+                <Text className="mt-1 font-heading text-xs text-muted">Timer: {item.timer}s</Text>
               )}
             </View>
           );
@@ -254,7 +254,7 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
         case 'video':
           return (
             <View className="rounded-lg bg-gray-200 p-2">
-              <Text className="text-sm text-gray-600">🎬 Video</Text>
+              <Text className="font-heading text-sm text-muted">🎬 Video</Text>
             </View>
           );
 
@@ -267,7 +267,7 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
                   onPress={handleReplyContextPress}
                   activeOpacity={0.7}
                 >
-                  <Text className="text-xs text-blue-600 underline">
+                  <Text className="font-heading text-xs text-brand underline">
                     ↩️ Replying to{' '}
                     {originalMessage.message_type === 'photo'
                       ? '📸 Photo'
@@ -277,12 +277,18 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
                   </Text>
                 </TouchableOpacity>
               )}
-              <Text className="text-base text-gray-800">{item.content || 'No content'}</Text>
+              <Text className="text-text-primary font-heading text-base">
+                {item.content || 'No content'}
+              </Text>
             </View>
           );
 
         default:
-          return <Text className="text-base text-gray-800">{item.content || 'No content'}</Text>;
+          return (
+            <Text className="text-text-primary font-heading text-base">
+              {item.content || 'No content'}
+            </Text>
+          );
       }
     };
 
@@ -307,19 +313,21 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
           style={{
             marginLeft: isReply ? 20 : 0,
             borderLeftWidth: isReply ? 2 : 0,
-            borderLeftColor: '#3B82F6',
+            borderLeftColor: '#FF8C69',
             paddingLeft: isReply ? 8 : 0,
             ...highlightStyle,
           }}
         >
           <View
-            className={`max-w-[70%] ${isOwnMessage ? 'bg-blue-500' : 'bg-gray-200'} rounded-lg p-3`}
+            className={`max-w-[70%] ${isOwnMessage ? 'bg-brand' : 'bg-gray-200'} rounded-lg p-3`}
             style={{
               opacity: isReply ? 0.9 : 1,
             }}
           >
             {renderMessageContent()}
-            <Text className={`mt-1 text-xs ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'}`}>
+            <Text
+              className={`mt-1 font-heading text-xs ${isOwnMessage ? 'text-white' : 'text-muted'}`}
+            >
               {messageTime}
             </Text>
           </View>
@@ -334,8 +342,8 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
   function renderEmptyState() {
     return (
       <View className="flex-1 items-center justify-center p-8">
-        <Text className="mb-2 text-center text-lg text-gray-500">No messages yet</Text>
-        <Text className="text-center text-sm text-gray-400">
+        <Text className="mb-2 text-center font-heading text-lg text-muted">No messages yet</Text>
+        <Text className="text-center font-heading text-sm text-muted">
           Start the conversation by sending a snap!
         </Text>
       </View>
@@ -372,8 +380,8 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#3B82F6" />
-        <Text className="mt-4 text-gray-500">Loading messages...</Text>
+        <ActivityIndicator size="large" color="#FF8C69" />
+        <Text className="mt-4 font-heading text-muted">Loading messages...</Text>
       </View>
     );
   }
@@ -384,12 +392,14 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
       <SafeAreaView edges={['top']} className="bg-white">
         <View className="flex-row items-center border-b border-gray-200 bg-white px-4 py-3">
           <TouchableOpacity onPress={handleBack} className="mr-3">
-            <Text className="text-lg text-blue-500">←</Text>
+            <Text className="font-heading text-lg text-brand">←</Text>
           </TouchableOpacity>
 
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900">{otherUsername}</Text>
-            <Text className="text-sm text-gray-500">{messages.length} messages</Text>
+            <Text className="text-text-primary font-heading text-lg font-semibold">
+              {otherUsername}
+            </Text>
+            <Text className="font-heading text-sm text-muted">{messages.length} messages</Text>
           </View>
         </View>
       </SafeAreaView>
@@ -404,7 +414,7 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            colors={['#3B82F6']}
+            colors={['#FF8C69']}
           />
         }
         ListEmptyComponent={renderEmptyState}
@@ -422,7 +432,7 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
       >
         <View className="flex-row items-center border-t border-gray-200 bg-white px-4 py-2">
           <TextInput
-            className="flex-1 rounded-lg bg-gray-100 px-4 py-3 text-gray-800"
+            className="text-text-primary flex-1 rounded-lg bg-gray-100 px-4 py-3 font-heading"
             placeholder="Type a message..."
             value={newMessage}
             onChangeText={setNewMessage}
@@ -431,12 +441,12 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
             style={{ minHeight: 40, maxHeight: 100 }}
           />
           <TouchableOpacity
-            className="ml-2 rounded-full bg-blue-500 px-4 py-2"
+            className="ml-2 rounded-full bg-brand px-4 py-2"
             onPress={handleSendMessage}
             disabled={!newMessage.trim()}
             activeOpacity={newMessage.trim() ? 0.7 : 1}
           >
-            <Text className="font-semibold text-white">Send</Text>
+            <Text className="font-heading font-semibold text-white">Send</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -451,8 +461,13 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
         >
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center' }}>
             <View style={{ margin: 24, backgroundColor: 'white', borderRadius: 12, padding: 20 }}>
-              <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>Replying to:</Text>
-              <Text style={{ color: '#6B7280', marginBottom: 16 }} numberOfLines={2}>
+              <Text style={{ fontFamily: 'Nunito', fontWeight: 'bold', marginBottom: 8 }}>
+                Replying to:
+              </Text>
+              <Text
+                style={{ fontFamily: 'Nunito', color: '#AAB0B7', marginBottom: 16 }}
+                numberOfLines={2}
+              >
                 {replyToMessage.content}
               </Text>
               <TextInput
@@ -464,6 +479,7 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
                   fontSize: 16,
                   marginBottom: 12,
                   minHeight: 40,
+                  fontFamily: 'Nunito',
                 }}
                 placeholder="Type your reply..."
                 value={replyText}
@@ -477,14 +493,18 @@ export default function IndividualChatScreen({ navigation, route }: IndividualCh
                   onPress={() => setReplyModalVisible(false)}
                   style={{ marginRight: 16 }}
                 >
-                  <Text style={{ color: '#3B82F6', fontWeight: 'bold' }}>Cancel</Text>
+                  <Text style={{ fontFamily: 'Nunito', color: '#FF8C69', fontWeight: 'bold' }}>
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleSendTextReply}
                   disabled={!replyText.trim()}
                   style={{ opacity: replyText.trim() ? 1 : 0.5 }}
                 >
-                  <Text style={{ color: '#3B82F6', fontWeight: 'bold' }}>Send</Text>
+                  <Text style={{ fontFamily: 'Nunito', color: '#FF8C69', fontWeight: 'bold' }}>
+                    Send
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>

@@ -19,8 +19,8 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
   const dispatch = useDispatch();
   if (!user) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-lg text-gray-600">User not found</Text>
+      <View className="flex-1 items-center justify-center bg-gray-50">
+        <Text className="font-heading text-lg text-muted">User not found</Text>
       </View>
     );
   }
@@ -89,24 +89,15 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
   }
 
   return (
-    <ScrollView className="flex-1 bg-white">
+    <ScrollView className="flex-1 bg-gray-50">
       {/* Header */}
       <SafeAreaView edges={['top']} className="bg-white">
-        <View className="flex-row items-center justify-between border-b border-gray-100 px-4 py-4">
-          <TouchableOpacity
-            onPress={handleBack}
-            style={{ minWidth: 48, minHeight: 40, justifyContent: 'center' }}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Text className="font-heading text-lg text-brand">&lt; Back</Text>
+        <View className="flex-row items-center justify-between border-b border-gray-200 px-6 py-4">
+          <TouchableOpacity onPress={handleBack}>
+            <Text className="font-heading text-lg font-semibold text-brand">Back</Text>
           </TouchableOpacity>
-          <Text
-            className="text-text-primary flex-1 text-center font-heading text-lg font-bold"
-            style={{ marginLeft: -48 }}
-          >
-            Edit Profile
-          </Text>
-          <View style={{ width: 48 }} />
+          <Text className="text-text-primary font-heading text-xl font-bold">Edit Profile</Text>
+          <View className="w-12" />
         </View>
       </SafeAreaView>
       {/* Avatar lower on the page */}
@@ -115,8 +106,8 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
           {avatarUrl ? (
             <Image source={{ uri: avatarUrl }} className="h-24 w-24 rounded-full" />
           ) : (
-            <View className="h-24 w-24 items-center justify-center rounded-full bg-gray-200">
-              <Text className="font-heading text-4xl font-bold text-gray-400">
+            <View className="h-24 w-24 items-center justify-center rounded-full bg-brand-light">
+              <Text className="font-heading text-4xl font-bold text-brand">
                 {username.charAt(0).toUpperCase() || 'U'}
               </Text>
             </View>
@@ -163,7 +154,7 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
           className="mb-8"
           disabled={isSaving}
         />
-        <Button label="Logout" variant="text" onPress={handleLogout} className="text-red-500" />
+        <Button label="Logout" variant="text" onPress={handleLogout} className="text-error" />
       </View>
     </ScrollView>
   );

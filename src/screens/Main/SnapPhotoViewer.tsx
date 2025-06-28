@@ -118,7 +118,9 @@ export default function SnapPhotoViewer({ navigation, route }: SnapPhotoViewerPr
             paddingVertical: 6,
           }}
         >
-          <Text style={{ color: 'white', fontSize: 20, fontWeight: 'bold' }}>{secondsLeft}s</Text>
+          <Text style={{ color: 'white', fontSize: 20, fontWeight: 'bold', fontFamily: 'Nunito' }}>
+            {secondsLeft}s
+          </Text>
         </View>
 
         {/* Reply Button */}
@@ -137,7 +139,7 @@ export default function SnapPhotoViewer({ navigation, route }: SnapPhotoViewerPr
           onPress={handleReply}
           activeOpacity={0.8}
         >
-          <Text style={{ color: 'white', fontSize: 20 }}>💬</Text>
+          <Text style={{ color: 'white', fontSize: 20, fontFamily: 'Nunito' }}>💬</Text>
         </TouchableOpacity>
       </TouchableOpacity>
 

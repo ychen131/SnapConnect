@@ -187,22 +187,24 @@ export default function MyStoriesScreen({ navigation }: { navigation: any }) {
         {/* Story Info */}
         <View className="mb-3 flex-row items-center justify-between">
           <View className="flex-1">
-            <Text className="text-sm text-gray-600">{formatTimeAgo(item.created_at)}</Text>
-            <Text className="text-xs text-gray-500">
+            <Text className="font-heading text-sm text-muted">
+              {formatTimeAgo(item.created_at)}
+            </Text>
+            <Text className="font-heading text-xs text-muted">
               {item.media_type === 'photo' ? `${item.timer}s timer` : 'Video'}
             </Text>
-            <Text className="text-xs text-gray-500">{item.view_count} views</Text>
+            <Text className="font-heading text-xs text-muted">{item.view_count} views</Text>
           </View>
 
           {/* Privacy Toggle */}
           <View className="flex-row items-center">
-            <Text className="mr-2 text-sm text-gray-600">
+            <Text className="mr-2 font-heading text-sm text-muted">
               {item.is_public ? 'Public' : 'Private'}
             </Text>
             <Switch
               value={item.is_public}
               onValueChange={() => handleTogglePrivacy(item)}
-              trackColor={{ false: '#767577', true: '#81b0ff' }}
+              trackColor={{ false: '#767577', true: '#FF8C69' }}
               thumbColor={item.is_public ? '#f5dd4b' : '#f4f3f4'}
             />
           </View>
@@ -211,10 +213,10 @@ export default function MyStoriesScreen({ navigation }: { navigation: any }) {
         {/* Action Buttons */}
         <View className="flex-row space-x-2">
           <TouchableOpacity
-            className="flex-1 rounded-lg bg-red-500 py-2"
+            className="flex-1 rounded-lg bg-error py-2"
             onPress={() => handleDeleteStory(item)}
           >
-            <Text className="text-center font-semibold text-white">Delete</Text>
+            <Text className="text-center font-heading font-semibold text-white">Delete</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -225,8 +227,8 @@ export default function MyStoriesScreen({ navigation }: { navigation: any }) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50">
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#0000ff" />
-          <Text className="mt-2 text-gray-600">Loading your stories...</Text>
+          <ActivityIndicator size="large" color="#FF8C69" />
+          <Text className="mt-2 font-heading text-muted">Loading your stories...</Text>
         </View>
       </SafeAreaView>
     );
@@ -238,9 +240,9 @@ export default function MyStoriesScreen({ navigation }: { navigation: any }) {
       <View className="border-b border-gray-200 bg-white px-4 py-3">
         <View className="flex-row items-center justify-between">
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text className="text-lg text-blue-500">← Back</Text>
+            <Text className="font-heading text-lg text-brand">← Back</Text>
           </TouchableOpacity>
-          <Text className="text-xl font-bold">My Stories</Text>
+          <Text className="text-text-primary font-heading text-xl font-bold">My Stories</Text>
           <View className="w-12" />
         </View>
       </View>
@@ -248,16 +250,16 @@ export default function MyStoriesScreen({ navigation }: { navigation: any }) {
       {/* Content */}
       {error ? (
         <View className="flex-1 items-center justify-center px-4 py-4">
-          <Text className="mb-2 text-xl text-red-600">⚠️ Error Loading Stories</Text>
-          <Text className="mb-4 text-center text-gray-500">{error}</Text>
-          <TouchableOpacity className="rounded-lg bg-blue-500 px-6 py-3" onPress={fetchStories}>
-            <Text className="font-semibold text-white">Try Again</Text>
+          <Text className="mb-2 font-heading text-xl text-error">⚠️ Error Loading Stories</Text>
+          <Text className="mb-4 text-center font-heading text-muted">{error}</Text>
+          <TouchableOpacity className="rounded-lg bg-brand px-6 py-3" onPress={fetchStories}>
+            <Text className="font-heading font-semibold text-white">Try Again</Text>
           </TouchableOpacity>
         </View>
       ) : stories.length === 0 ? (
         <View className="flex-1 items-center justify-center px-4 py-4">
-          <Text className="mb-2 text-xl text-gray-600">No Stories Yet</Text>
-          <Text className="text-center text-gray-500">
+          <Text className="mb-2 font-heading text-xl text-muted">No Stories Yet</Text>
+          <Text className="text-center font-heading text-muted">
             Create your first story by taking a photo or video and tapping "Add to Story"
           </Text>
         </View>

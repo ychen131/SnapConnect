@@ -45,10 +45,12 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   return (
     <View className="flex-1 items-center justify-center bg-gray-50 px-6">
       <Card className="w-full max-w-xs rounded-lg bg-white p-6 shadow-sm">
-        <Text className="mb-4 text-center text-2xl font-bold text-purple-600">
+        <Text className="mb-4 text-center font-heading text-2xl font-bold text-brand">
           Welcome to SnapDog
         </Text>
-        <Text className="mb-6 text-center text-base text-gray-600">Sign in to your account</Text>
+        <Text className="mb-6 text-center font-heading text-base text-muted">
+          Sign in to your account
+        </Text>
         <Input
           placeholder="Email"
           autoCapitalize="none"
@@ -71,7 +73,9 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
           disabled={isLoading}
         />
         {!!message && (
-          <Text className="mt-4 max-w-xs text-center text-xs text-red-500">{message}</Text>
+          <Text className="mt-4 max-w-xs text-center font-heading text-xs text-error">
+            {message}
+          </Text>
         )}
       </Card>
     </View>

@@ -149,21 +149,23 @@ export default function SendToScreen({ navigation, route }: SendToScreenProps) {
     return (
       <TouchableOpacity
         className={`flex-row items-center border-b border-gray-200 p-4 ${
-          isSelected ? 'bg-blue-50' : 'bg-white'
+          isSelected ? 'bg-brand-light' : 'bg-white'
         }`}
         onPress={() => toggleFriendSelection(item.id)}
       >
         {/* Avatar placeholder */}
-        <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-gray-300">
-          <Text className="text-lg font-bold text-gray-600">
+        <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-brand-light">
+          <Text className="font-heading text-lg font-bold text-brand">
             {item.username.charAt(0).toUpperCase()}
           </Text>
         </View>
 
         {/* Friend info */}
         <View className="flex-1">
-          <Text className="text-lg font-semibold text-gray-800">{item.username}</Text>
-          <Text className="text-sm text-gray-500">
+          <Text className="text-text-primary font-heading text-lg font-semibold">
+            {item.username}
+          </Text>
+          <Text className="font-heading text-sm text-muted">
             {item.status === 'accepted' ? 'Friend' : 'User'}
           </Text>
         </View>
@@ -171,10 +173,10 @@ export default function SendToScreen({ navigation, route }: SendToScreenProps) {
         {/* Selection indicator */}
         <View
           className={`h-6 w-6 items-center justify-center rounded-full border-2 ${
-            isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+            isSelected ? 'border-brand bg-brand' : 'border-gray-300'
           }`}
         >
-          {isSelected && <Text className="text-sm text-white">✓</Text>}
+          {isSelected && <Text className="font-heading text-sm text-white">✓</Text>}
         </View>
       </TouchableOpacity>
     );
@@ -183,9 +185,9 @@ export default function SendToScreen({ navigation, route }: SendToScreenProps) {
   // Show loading state
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#3B82F6" />
-        <Text className="mt-4 text-gray-600">Loading friends...</Text>
+      <View className="flex-1 items-center justify-center bg-gray-50">
+        <ActivityIndicator size="large" color="#FF8C69" />
+        <Text className="mt-4 font-heading text-muted">Loading friends...</Text>
       </View>
     );
   }
@@ -193,11 +195,13 @@ export default function SendToScreen({ navigation, route }: SendToScreenProps) {
   // Show sending spinner
   if (isSending) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#3B82F6" />
-        <Text className="mt-4 text-gray-600">Sending snap...</Text>
+      <View className="flex-1 items-center justify-center bg-gray-50">
+        <ActivityIndicator size="large" color="#FF8C69" />
+        <Text className="mt-4 font-heading text-muted">Sending snap...</Text>
         {successMessage ? (
-          <Text className="mt-4 text-lg font-semibold text-green-600">{successMessage}</Text>
+          <Text className="mt-4 font-heading text-lg font-semibold text-success">
+            {successMessage}
+          </Text>
         ) : null}
       </View>
     );
@@ -207,23 +211,23 @@ export default function SendToScreen({ navigation, route }: SendToScreenProps) {
   const hasSelectedFriends = selectedFriends.size > 0;
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-gray-50">
       {/* Header */}
       <SafeAreaView edges={['top']} className="bg-white">
         <View className="flex-row items-center justify-between border-b border-gray-200 p-4">
           <TouchableOpacity onPress={handleBack}>
-            <Text className="text-lg font-semibold text-blue-500">Back</Text>
+            <Text className="font-heading text-lg font-semibold text-brand">Back</Text>
           </TouchableOpacity>
 
-          <Text className="text-lg font-bold text-gray-800">Send To</Text>
+          <Text className="text-text-primary font-heading text-lg font-bold">Send To</Text>
 
           <TouchableOpacity
             onPress={handleSend}
             disabled={!hasSelectedFriends}
-            className={`rounded-full px-4 py-2 ${hasSelectedFriends ? 'bg-blue-500' : 'bg-gray-300'}`}
+            className={`rounded-full px-4 py-2 ${hasSelectedFriends ? 'bg-brand' : 'bg-gray-300'}`}
           >
             <Text
-              className={`font-semibold ${hasSelectedFriends ? 'text-white' : 'text-gray-500'}`}
+              className={`font-heading font-semibold ${hasSelectedFriends ? 'text-white' : 'text-muted'}`}
             >
               Send ({selectedFriends.size})
             </Text>
@@ -232,9 +236,9 @@ export default function SendToScreen({ navigation, route }: SendToScreenProps) {
       </SafeAreaView>
 
       {/* Search Bar */}
-      <View className="border-b border-gray-200 p-4">
+      <View className="border-b border-gray-200 bg-white p-4">
         <TextInput
-          className="rounded-lg bg-gray-100 px-4 py-3 text-gray-800"
+          className="text-text-primary rounded-lg bg-gray-100 px-4 py-3 font-heading"
           placeholder="Search friends..."
           value={searchTerm}
           onChangeText={setSearchTerm}
@@ -244,8 +248,8 @@ export default function SendToScreen({ navigation, route }: SendToScreenProps) {
       </View>
 
       {/* Content Preview */}
-      <View className="border-b border-gray-200 p-4">
-        <Text className="mb-2 text-sm text-gray-600">
+      <View className="border-b border-gray-200 bg-white p-4">
+        <Text className="mb-2 font-heading text-sm text-muted">
           {contentType === 'photo' ? '📸 Photo' : '🎬 Video'}
           {contentType === 'photo' && photoTimer && ` • ${photoTimer}s`}
         </Text>
@@ -260,11 +264,13 @@ export default function SendToScreen({ navigation, route }: SendToScreenProps) {
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center p-8">
             {isSearching ? (
-              <ActivityIndicator size="large" color="#3B82F6" />
+              <ActivityIndicator size="large" color="#FF8C69" />
             ) : searchTerm.length >= 2 ? (
-              <Text className="text-center text-gray-500">No users found for "{searchTerm}"</Text>
+              <Text className="text-center font-heading text-muted">
+                No users found for "{searchTerm}"
+              </Text>
             ) : (
-              <Text className="text-center text-gray-500">
+              <Text className="text-center font-heading text-muted">
                 No friends found. Add some friends to get started!
               </Text>
             )}

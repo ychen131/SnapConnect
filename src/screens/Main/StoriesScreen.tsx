@@ -32,26 +32,26 @@ function StoryAvatar({ id, username, avatarUrl, isOwn, hasStory, isNew, onPress,
         className={`h-16 w-16 items-center justify-center rounded-full border-4 ${
           isOwn
             ? hasStory
-              ? 'border-purple-500'
+              ? 'border-brand'
               : 'border-gray-300'
             : isNew
-              ? 'border-blue-500'
+              ? 'border-brand'
               : 'border-gray-300'
         } bg-gray-200`}
       >
         {/* Placeholder for avatar image */}
         {avatarUrl ? (
           // TODO: Replace with <Image source={{ uri: avatarUrl }} ... />
-          <Text className="text-2xl font-bold text-gray-600">
+          <Text className="font-heading text-2xl font-bold text-muted">
             {displayName.charAt(0).toUpperCase()}
           </Text>
         ) : (
-          <Text className="text-2xl font-bold text-gray-600">
+          <Text className="font-heading text-2xl font-bold text-muted">
             {displayName.charAt(0).toUpperCase()}
           </Text>
         )}
       </View>
-      <Text className="mt-2 w-16 text-center text-xs" numberOfLines={1}>
+      <Text className="mt-2 w-16 text-center font-heading text-xs" numberOfLines={1}>
         {isOwn ? (hasStory ? 'Your Story' : 'Add Story') : displayName}
       </Text>
     </TouchableOpacity>
@@ -138,21 +138,23 @@ export default function StoriesScreen() {
     .filter((s) => s.hasStory || s.isOwn);
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-row items-center border-b border-gray-200 px-4 py-3">
-        <Text className="text-2xl font-bold">Stories</Text>
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <View className="flex-row items-center border-b border-gray-200 bg-white px-4 py-3">
+        <Text className="text-text-primary font-heading text-2xl font-bold">Stories</Text>
       </View>
       <View className="py-6">
         {isLoading ? (
-          <ActivityIndicator size="large" color="#a78bfa" />
+          <ActivityIndicator size="large" color="#FF8C69" />
         ) : error ? (
           <View className="items-center justify-center py-12">
-            <Text className="text-lg text-red-500">{error}</Text>
+            <Text className="font-heading text-lg text-error">{error}</Text>
           </View>
         ) : stories.length === 0 ? (
           <View className="items-center justify-center py-12">
-            <Text className="text-lg text-gray-500">No stories yet</Text>
-            <Text className="text-sm text-gray-400">Your friends' stories will appear here</Text>
+            <Text className="font-heading text-lg text-muted">No stories yet</Text>
+            <Text className="font-heading text-sm text-muted">
+              Your friends' stories will appear here
+            </Text>
           </View>
         ) : (
           <FlatList

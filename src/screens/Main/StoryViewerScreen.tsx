@@ -167,7 +167,7 @@ export default function StoryViewerScreen() {
               height: 3,
               marginHorizontal: 2,
               backgroundColor:
-                idx < currentStoryIndex ? '#a78bfa' : idx === currentStoryIndex ? '#fff' : '#555',
+                idx < currentStoryIndex ? '#FF8C69' : idx === currentStoryIndex ? '#fff' : '#555',
               opacity: idx === currentStoryIndex ? 1 : 0.5,
               borderRadius: 2,
             }}
@@ -285,7 +285,7 @@ export default function StoryViewerScreen() {
                 width: 40,
                 height: 40,
                 borderRadius: 20,
-                backgroundColor: '#333',
+                backgroundColor: '#FF8C69',
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginRight: 12,
@@ -297,27 +297,33 @@ export default function StoryViewerScreen() {
                   style={{ width: 40, height: 40, borderRadius: 20 }}
                 />
               ) : (
-                <Text style={{ color: 'white', fontSize: 20, fontWeight: 'bold' }}>
+                <Text
+                  style={{ color: 'white', fontSize: 20, fontWeight: 'bold', fontFamily: 'Nunito' }}
+                >
                   {currentUser?.username ? currentUser.username.charAt(0).toUpperCase() : '?'}
                 </Text>
               )}
             </View>
-            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
+            <Text
+              style={{ color: 'white', fontSize: 18, fontWeight: 'bold', fontFamily: 'Nunito' }}
+            >
               {currentUser?.username || 'User'}
             </Text>
           </View>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={{ color: 'white', fontSize: 24 }}>✕</Text>
+            <Text style={{ color: 'white', fontSize: 24, fontFamily: 'Nunito' }}>✕</Text>
           </TouchableOpacity>
         </View>
         {/* Story content */}
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           {isLoading ? (
-            <ActivityIndicator size="large" color="#a78bfa" />
+            <ActivityIndicator size="large" color="#FF8C69" />
           ) : error ? (
-            <Text style={{ color: 'red', fontSize: 18 }}>{error}</Text>
+            <Text style={{ color: '#ef4444', fontSize: 18, fontFamily: 'Nunito' }}>{error}</Text>
           ) : !story ? (
-            <Text style={{ color: 'gray', fontSize: 18 }}>No stories to show</Text>
+            <Text style={{ color: '#AAB0B7', fontSize: 18, fontFamily: 'Nunito' }}>
+              No stories to show
+            </Text>
           ) : story.media_type === 'photo' ? (
             <Image
               source={{ uri: story.media_url }}
@@ -325,7 +331,9 @@ export default function StoryViewerScreen() {
               resizeMode="cover"
             />
           ) : (
-            <Text style={{ color: 'white', fontSize: 18 }}>[Video playback coming soon]</Text>
+            <Text style={{ color: 'white', fontSize: 18, fontFamily: 'Nunito' }}>
+              [Video playback coming soon]
+            </Text>
           )}
           {currentUserStories.length > 1 && renderTapAreas()}
         </View>

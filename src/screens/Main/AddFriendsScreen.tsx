@@ -177,14 +177,16 @@ export default function AddFriendsScreen({ navigation }: { navigation: any }) {
       <View className="flex-row items-center justify-between border-b border-gray-200 bg-white p-4">
         {/* User info */}
         <View className="flex-1 flex-row items-center">
-          <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-purple-500">
-            <Text className="text-lg font-bold text-white">
+          <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-brand">
+            <Text className="font-heading text-lg font-bold text-white">
               {item.username.charAt(0).toUpperCase()}
             </Text>
           </View>
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-800">{item.username}</Text>
-            <Text className="text-sm text-gray-500">@{item.username}</Text>
+            <Text className="text-text-primary font-heading text-lg font-semibold">
+              {item.username}
+            </Text>
+            <Text className="font-heading text-sm text-muted">@{item.username}</Text>
           </View>
         </View>
 
@@ -192,12 +194,12 @@ export default function AddFriendsScreen({ navigation }: { navigation: any }) {
         <TouchableOpacity
           onPress={() => handleSendFriendRequest(item.id)}
           disabled={isSending}
-          className={`rounded-full px-4 py-2 ${isSending ? 'bg-gray-300' : 'bg-purple-500'}`}
+          className={`rounded-full px-4 py-2 ${isSending ? 'bg-gray-300' : 'bg-brand'}`}
         >
           {isSending ? (
             <ActivityIndicator size="small" color="#6b7280" />
           ) : (
-            <Text className="font-semibold text-white">Add Friend</Text>
+            <Text className="font-heading font-semibold text-white">Add Friend</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -212,14 +214,16 @@ export default function AddFriendsScreen({ navigation }: { navigation: any }) {
       <View className="flex-row items-center justify-between border-b border-gray-200 bg-white p-4">
         {/* User info */}
         <View className="flex-1 flex-row items-center">
-          <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-purple-500">
-            <Text className="text-lg font-bold text-white">
+          <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-brand">
+            <Text className="font-heading text-lg font-bold text-white">
               {item.username.charAt(0).toUpperCase()}
             </Text>
           </View>
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-800">{item.username}</Text>
-            <Text className="text-sm text-gray-500">wants to be your friend</Text>
+            <Text className="text-text-primary font-heading text-lg font-semibold">
+              {item.username}
+            </Text>
+            <Text className="font-heading text-sm text-muted">wants to be your friend</Text>
           </View>
         </View>
 
@@ -227,15 +231,15 @@ export default function AddFriendsScreen({ navigation }: { navigation: any }) {
         <View className="flex-row space-x-2">
           <TouchableOpacity
             onPress={() => handleAcceptRequest(item.id)}
-            className="rounded-full bg-green-500 px-4 py-2"
+            className="rounded-full bg-success px-4 py-2"
           >
-            <Text className="font-semibold text-white">Accept</Text>
+            <Text className="font-heading font-semibold text-white">Accept</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => handleDeclineRequest(item.id)}
-            className="rounded-full bg-red-500 px-4 py-2"
+            className="rounded-full bg-error px-4 py-2"
           >
-            <Text className="font-semibold text-white">Decline</Text>
+            <Text className="font-heading font-semibold text-white">Decline</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -248,9 +252,9 @@ export default function AddFriendsScreen({ navigation }: { navigation: any }) {
       <View className="border-b border-gray-200 bg-white px-6 py-4">
         <View className="flex-row items-center justify-between">
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text className="text-lg font-semibold text-purple-600">Back</Text>
+            <Text className="font-heading text-lg font-semibold text-brand">Back</Text>
           </TouchableOpacity>
-          <Text className="text-xl font-bold text-gray-800">Add Friends</Text>
+          <Text className="text-text-primary font-heading text-xl font-bold">Add Friends</Text>
           <View className="w-12" />
         </View>
       </View>
@@ -260,11 +264,11 @@ export default function AddFriendsScreen({ navigation }: { navigation: any }) {
         <View className="flex-row">
           <TouchableOpacity
             onPress={() => setActiveTab('search')}
-            className={`flex-1 py-4 ${activeTab === 'search' ? 'border-b-2 border-purple-500' : ''}`}
+            className={`flex-1 py-4 ${activeTab === 'search' ? 'border-b-2 border-brand' : ''}`}
           >
             <Text
-              className={`text-center font-semibold ${
-                activeTab === 'search' ? 'text-purple-600' : 'text-gray-500'
+              className={`text-center font-heading font-semibold ${
+                activeTab === 'search' ? 'text-brand' : 'text-muted'
               }`}
             >
               Search
@@ -272,11 +276,11 @@ export default function AddFriendsScreen({ navigation }: { navigation: any }) {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setActiveTab('requests')}
-            className={`flex-1 py-4 ${activeTab === 'requests' ? 'border-b-2 border-purple-500' : ''}`}
+            className={`flex-1 py-4 ${activeTab === 'requests' ? 'border-b-2 border-brand' : ''}`}
           >
             <Text
-              className={`text-center font-semibold ${
-                activeTab === 'requests' ? 'text-purple-600' : 'text-gray-500'
+              className={`text-center font-heading font-semibold ${
+                activeTab === 'requests' ? 'text-brand' : 'text-muted'
               }`}
             >
               Requests ({pendingRequests.length})
@@ -291,7 +295,7 @@ export default function AddFriendsScreen({ navigation }: { navigation: any }) {
           {/* Search Bar */}
           <View className="border-b border-gray-200 bg-white p-4">
             <TextInput
-              className="rounded-lg bg-gray-100 px-4 py-3 text-gray-800"
+              className="text-text-primary rounded-lg bg-gray-100 px-4 py-3 font-heading"
               placeholder="Search by username..."
               value={searchTerm}
               onChangeText={setSearchTerm}
@@ -309,13 +313,13 @@ export default function AddFriendsScreen({ navigation }: { navigation: any }) {
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center p-8">
                 {isSearching ? (
-                  <ActivityIndicator size="large" color="#8b5cf6" />
+                  <ActivityIndicator size="large" color="#FF8C69" />
                 ) : searchTerm.length >= 2 ? (
-                  <Text className="text-center text-gray-500">
+                  <Text className="text-center font-heading text-muted">
                     No users found for "{searchTerm}"
                   </Text>
                 ) : (
-                  <Text className="text-center text-gray-500">
+                  <Text className="text-center font-heading text-muted">
                     Search for friends by their username
                   </Text>
                 )}
@@ -336,9 +340,11 @@ export default function AddFriendsScreen({ navigation }: { navigation: any }) {
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center p-8">
                 {isLoadingRequests ? (
-                  <ActivityIndicator size="large" color="#8b5cf6" />
+                  <ActivityIndicator size="large" color="#FF8C69" />
                 ) : (
-                  <Text className="text-center text-gray-500">No pending friend requests</Text>
+                  <Text className="text-center font-heading text-muted">
+                    No pending friend requests
+                  </Text>
                 )}
               </View>
             }

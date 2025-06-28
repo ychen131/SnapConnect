@@ -10,8 +10,10 @@ import { View, Text } from 'react-native';
  */
 export default function HomeScreen() {
   return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-xl font-bold">Main App Home (Placeholder)</Text>
+    <View className="flex-1 items-center justify-center bg-gray-50">
+      <Text className="text-text-primary font-heading text-xl font-bold">
+        Main App Home (Placeholder)
+      </Text>
     </View>
   );
 }
