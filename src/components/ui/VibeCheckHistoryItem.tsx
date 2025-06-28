@@ -11,12 +11,14 @@ import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
  * @param summary The short summary (vibe) from the Magic Sticker
  * @param timestamp When the Vibe Check was performed
  * @param onPress Callback when the item is tapped (to show full report)
+ * @param getRelativeTime Optional function to get a relative time from a timestamp
  */
 interface VibeCheckHistoryItemProps {
   photoUri: string;
   summary: string;
   timestamp: string;
   onPress: () => void;
+  getRelativeTime?: (timestamp: string) => string;
 }
 
 /**
@@ -27,6 +29,7 @@ export default function VibeCheckHistoryItem({
   summary,
   timestamp,
   onPress,
+  getRelativeTime,
 }: VibeCheckHistoryItemProps) {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
@@ -45,8 +48,10 @@ export default function VibeCheckHistoryItem({
         </View>
       </View>
 
-      {/* Timestamp */}
-      <Text style={styles.timestamp}>{timestamp}</Text>
+      {/* Relative Timestamp */}
+      <Text style={styles.timestamp}>
+        {getRelativeTime ? getRelativeTime(timestamp) : timestamp}
+      </Text>
     </TouchableOpacity>
   );
 }

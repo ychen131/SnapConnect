@@ -45,6 +45,8 @@ import Toast from '../../components/ui/Toast';
 import VibeCheckSticker from '../../components/editor/VibeCheckSticker';
 import VibeCheckReport from '../../components/report/VibeCheckReport';
 import { checkNetworkConnectivity, isNetworkError } from '../../utils/networkUtils';
+import { VibeCheckHistoryItem } from '../../components/ui/VibeCheckHistoryGrid';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type CameraScreenNavigationProp = NativeStackNavigationProp<CameraStackParamList, 'CameraMain'>;
 
@@ -131,6 +133,12 @@ export default function CameraScreen() {
   const [showReport, setShowReport] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
 
+  // Vibe Check state
+  const [currentVibeCheck, setCurrentVibeCheck] = useState<VibeCheckHistoryItem | null>(null);
+
+  // Saved Vibe Checks state
+  const [savedVibeChecks, setSavedVibeChecks] = useState<VibeCheckHistoryItem[]>([]);
+
   // Initialize history when a photo is taken
   useEffect(() => {
     if (photoUri) {
@@ -174,6 +182,26 @@ export default function CameraScreen() {
         });
     }
   }, [photoUri]);
+
+  // When Vibe Check is successful, set currentVibeCheck
+  useEffect(() => {
+    if (shortSummary && detailedReport && photoUri && status === 'succeeded') {
+      setCurrentVibeCheck({
+        id: `${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
+        summary: shortSummary,
+        detailedReport,
+        photoUri,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }, [shortSummary, detailedReport, photoUri, status]);
+
+  // Load saved Vibe Checks on mount
+  useEffect(() => {
+    AsyncStorage.getItem('savedVibeChecks').then((data) => {
+      setSavedVibeChecks(data ? JSON.parse(data) : []);
+    });
+  }, []);
 
   if (!permission) {
     return (
@@ -897,6 +925,18 @@ export default function CameraScreen() {
     }
   }
 
+  // Handler for Save to Profile button
+  async function handleSaveToProfileFromCamera() {
+    if (!currentVibeCheck) return;
+    const alreadySaved = savedVibeChecks.some(
+      (v: VibeCheckHistoryItem) => v.id === currentVibeCheck.id,
+    );
+    if (alreadySaved) return;
+    const updated = [...savedVibeChecks, currentVibeCheck];
+    await AsyncStorage.setItem('savedVibeChecks', JSON.stringify(updated));
+    setSavedVibeChecks(updated);
+  }
+
   // Enhanced Photo Preview Screen
   if (photoUri) {
     return (
@@ -1135,13 +1175,20 @@ export default function CameraScreen() {
         )}
 
         {/* Vibe Check Report Modal */}
-        <VibeCheckReport
-          visible={showReport}
-          onClose={() => setShowReport(false)}
-          report={detailedReport || ''}
-          photoUri={photoUri || undefined}
-          isLoading={status === 'loading'}
-        />
+        {currentVibeCheck && (
+          <VibeCheckReport
+            visible={showReport}
+            onClose={() => setShowReport(false)}
+            report={currentVibeCheck.detailedReport}
+            photoUri={currentVibeCheck.photoUri}
+            isLoading={status === 'loading'}
+            onSaveToProfile={
+              !savedVibeChecks.some((v: VibeCheckHistoryItem) => v.id === currentVibeCheck.id)
+                ? handleSaveToProfileFromCamera
+                : undefined
+            }
+          />
+        )}
       </View>
     );
   }

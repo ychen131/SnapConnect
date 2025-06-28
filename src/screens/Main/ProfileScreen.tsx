@@ -20,6 +20,8 @@ import VibeCheckHistoryGrid, {
   VibeCheckHistoryItem,
 } from '../../components/ui/VibeCheckHistoryGrid';
 import VibeCheckReport from '../../components/report/VibeCheckReport';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { formatDistanceToNow, parseISO } from 'date-fns';
 
 /**
  * Displays the user's profile with basic information and navigation options.
@@ -35,6 +37,7 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
   const [selectedTab, setSelectedTab] = useState<'stories' | 'vibes'>('vibes');
   const [showVibeCheckReport, setShowVibeCheckReport] = useState(false);
   const [selectedVibeCheck, setSelectedVibeCheck] = useState<VibeCheckHistoryItem | null>(null);
+  const [savedVibeChecks, setSavedVibeChecks] = useState<VibeCheckHistoryItem[]>([]);
 
   // Mock data for Vibe Check history (replace with real data later)
   const [vibeCheckHistory] = useState<VibeCheckHistoryItem[]>([
@@ -106,6 +109,38 @@ Channel this energy into positive activities like walks, play, or training sessi
       }
     }, [user?.id]),
   );
+
+  // Load saved Vibe Checks from AsyncStorage
+  async function loadSavedVibeChecks() {
+    try {
+      const data = await AsyncStorage.getItem('savedVibeChecks');
+      setSavedVibeChecks(data ? JSON.parse(data) : []);
+    } catch (err) {
+      setSavedVibeChecks([]);
+    }
+  }
+
+  // Load on mount and when screen is focused
+  useEffect(() => {
+    loadSavedVibeChecks();
+    const unsubscribe = navigation.addListener('focus', loadSavedVibeChecks);
+    return unsubscribe;
+  }, [navigation]);
+
+  // Merge mock and real Vibe Checks (avoid duplicates by id, sort by timestamp desc)
+  const allVibeChecks = React.useMemo(() => {
+    const all = [...vibeCheckHistory];
+    const existingIds = new Set(all.map((v) => v.id));
+    for (const vibe of savedVibeChecks) {
+      if (!existingIds.has(vibe.id)) all.push(vibe);
+    }
+    // Sort by timestamp desc (newest first)
+    return all.sort((a, b) => {
+      const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return tb - ta;
+    });
+  }, [vibeCheckHistory, savedVibeChecks]);
 
   /**
    * Loads user statistics (friends, snaps, stories)
@@ -194,8 +229,23 @@ Channel this energy into positive activities like walks, play, or training sessi
    * Handles tapping a Vibe Check history item
    */
   function handleVibeCheckPress(item: VibeCheckHistoryItem) {
-    setSelectedVibeCheck(item);
+    // Ensure the item has a unique id
+    let vibeCheck = item;
+    if (!vibeCheck.id) {
+      vibeCheck = { ...item, id: `${Date.now()}-${Math.floor(Math.random() * 1000000)}` };
+    }
+    setSelectedVibeCheck(vibeCheck);
     setShowVibeCheckReport(true);
+  }
+
+  /**
+   * Handles deleting a saved Vibe Check
+   */
+  async function handleDeleteVibeCheck(id: string) {
+    const filtered = savedVibeChecks.filter((v) => v.id !== id);
+    await AsyncStorage.setItem('savedVibeChecks', JSON.stringify(filtered));
+    setSavedVibeChecks(filtered);
+    setShowVibeCheckReport(false);
   }
 
   /**
@@ -227,6 +277,26 @@ Channel this energy into positive activities like walks, play, or training sessi
       userIndex: 0,
       storyIndex,
     });
+  }
+
+  // Utility to get relative time
+  function getRelativeTime(timestamp: string) {
+    if (!timestamp) return '';
+    try {
+      return formatDistanceToNow(parseISO(timestamp), { addSuffix: true });
+    } catch {
+      return timestamp;
+    }
+  }
+
+  // Handler for saving a Vibe Check to profile
+  async function handleSaveToProfile(vibeCheck: VibeCheckHistoryItem) {
+    if (!vibeCheck) return;
+    const alreadySaved = savedVibeChecks.some((v) => v.id === vibeCheck.id);
+    if (alreadySaved) return;
+    const updated = [...savedVibeChecks, vibeCheck];
+    await AsyncStorage.setItem('savedVibeChecks', JSON.stringify(updated));
+    setSavedVibeChecks(updated);
   }
 
   if (!user) {
@@ -372,7 +442,11 @@ Channel this energy into positive activities like walks, play, or training sessi
     if (selectedTab === 'vibes') {
       return (
         <View className="px-1 pb-4 pt-1">
-          <VibeCheckHistoryGrid items={vibeCheckHistory} onItemPress={handleVibeCheckPress} />
+          <VibeCheckHistoryGrid
+            items={allVibeChecks}
+            onItemPress={handleVibeCheckPress}
+            getRelativeTime={getRelativeTime}
+          />
         </View>
       );
     } else {
@@ -410,6 +484,17 @@ Channel this energy into positive activities like walks, play, or training sessi
           onClose={handleCloseVibeCheckReport}
           report={selectedVibeCheck.detailedReport}
           photoUri={selectedVibeCheck.photoUri}
+          isLoading={false}
+          onDelete={
+            selectedVibeCheck && savedVibeChecks.some((v) => v.id === selectedVibeCheck.id)
+              ? () => handleDeleteVibeCheck(selectedVibeCheck.id)
+              : undefined
+          }
+          onSaveToProfile={
+            selectedVibeCheck && !savedVibeChecks.some((v) => v.id === selectedVibeCheck.id)
+              ? () => handleSaveToProfile(selectedVibeCheck)
+              : undefined
+          }
         />
       )}
     </SafeAreaView>

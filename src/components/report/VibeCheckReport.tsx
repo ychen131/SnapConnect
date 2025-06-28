@@ -35,6 +35,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
  * @param report The detailed markdown report
  * @param photoUri (optional) The user's photo to display at the top
  * @param isLoading (optional) Whether the report is still loading
+ * @param onDelete (optional) Callback to delete the report
+ * @param onSaveToProfile (optional) Callback to save the report to the user's profile
  */
 interface VibeCheckReportProps {
   visible: boolean;
@@ -42,6 +44,8 @@ interface VibeCheckReportProps {
   report: string;
   photoUri?: string;
   isLoading?: boolean;
+  onDelete?: () => void;
+  onSaveToProfile?: () => void;
 }
 
 /**
@@ -98,6 +102,8 @@ export default function VibeCheckReport({
   report,
   photoUri,
   isLoading = false,
+  onDelete,
+  onSaveToProfile,
 }: VibeCheckReportProps) {
   const [isPhotoModalVisible, setPhotoModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -172,7 +178,7 @@ export default function VibeCheckReport({
             </TouchableOpacity>
           )}
 
-          {/* Download & Share Buttons */}
+          {/* Download, Share, and Delete Buttons */}
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={styles.actionButton}
@@ -184,6 +190,29 @@ export default function VibeCheckReport({
             <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
               <Text style={styles.actionButtonText}>Share</Text>
             </TouchableOpacity>
+            {/* Show Save to Profile if not already saved (i.e., if onDelete is not present) */}
+            {!onDelete && onSaveToProfile && (
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: '#e0f7fa', borderColor: '#00bcd4' },
+                ]}
+                onPress={onSaveToProfile}
+              >
+                <Text style={[styles.actionButtonText, { color: '#00796b' }]}>Save to Profile</Text>
+              </TouchableOpacity>
+            )}
+            {onDelete && (
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: '#ffdddd', borderColor: '#ff4444' },
+                ]}
+                onPress={onDelete}
+              >
+                <Text style={[styles.actionButtonText, { color: '#b00020' }]}>Delete</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Expandable Markdown Sections or Loading Spinner */}

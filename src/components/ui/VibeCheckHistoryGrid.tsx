@@ -21,16 +21,22 @@ export interface VibeCheckHistoryItem {
  * Props for VibeCheckHistoryGrid
  * @param items Array of Vibe Check history items to display
  * @param onItemPress Callback when a history item is tapped
+ * @param getRelativeTime Optional function to get relative time
  */
 interface VibeCheckHistoryGridProps {
   items: VibeCheckHistoryItem[];
   onItemPress: (item: VibeCheckHistoryItem) => void;
+  getRelativeTime?: (timestamp: string) => string;
 }
 
 /**
  * Grid component for displaying Vibe Check history
  */
-export default function VibeCheckHistoryGrid({ items, onItemPress }: VibeCheckHistoryGridProps) {
+export default function VibeCheckHistoryGrid({
+  items,
+  onItemPress,
+  getRelativeTime,
+}: VibeCheckHistoryGridProps) {
   if (items.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -49,6 +55,7 @@ export default function VibeCheckHistoryGrid({ items, onItemPress }: VibeCheckHi
       summary={item.summary}
       timestamp={item.timestamp}
       onPress={() => onItemPress(item)}
+      getRelativeTime={getRelativeTime}
     />
   );
 
