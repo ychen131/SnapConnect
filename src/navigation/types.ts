@@ -61,6 +61,7 @@ export type ProfileStackParamList = {
     }>;
     userIndex: number;
   };
+  Settings: undefined;
 };
 
 /**

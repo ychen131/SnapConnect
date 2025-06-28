@@ -24,6 +24,7 @@ import SnapPhotoViewer from '../screens/Main/SnapPhotoViewer';
 import SnapVideoViewer from '../screens/Main/SnapVideoViewer';
 import StoryViewerScreen from '../screens/Main/StoryViewerScreen';
 import CustomTabBar from '../components/CustomTabBar';
+import SettingsScreen from '../screens/Main/SettingsScreen';
 import type {
   MainTabParamList,
   CameraStackParamList,
@@ -73,6 +74,7 @@ function ProfileStackNavigator() {
       <Stack.Screen name="AddFriends" component={AddFriendsScreen} />
       <Stack.Screen name="MyStories" component={MyStoriesScreen} />
       <Stack.Screen name="StoryViewer" component={StoryViewerScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
     </Stack.Navigator>
   );
 }

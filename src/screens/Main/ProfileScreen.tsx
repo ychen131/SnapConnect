@@ -3,7 +3,7 @@
  * @description Profile screen displaying user information and friend management options.
  */
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Image } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -13,6 +13,9 @@ import { getFriendsList } from '../../services/friendService';
 import { getUserStories } from '../../services/storyService';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import Menu from '../../components/ui/Menu';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import StoriesGrid, { Story } from '../../components/ui/StoriesGrid';
 
 /**
  * Displays the user's profile with basic information and navigation options.
@@ -24,11 +27,13 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
   const [snapCount, setSnapCount] = useState(0);
   const [storyCount, setStoryCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [userStories, setUserStories] = useState<Story[]>([]);
 
   // Load user stats when component mounts
   useEffect(() => {
     if (user?.id) {
       loadUserStats();
+      fetchUserStories();
     }
   }, [user?.id]);
 
@@ -67,6 +72,16 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
     }
   }
 
+  async function fetchUserStories() {
+    if (!user?.id) return;
+    try {
+      const stories = await getUserStories(user.id, false);
+      setUserStories(stories);
+    } catch (error) {
+      setUserStories([]);
+    }
+  }
+
   /**
    * Handles user logout
    */
@@ -95,19 +110,17 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
   }
 
   /**
-   * Navigates to My Stories screen
-   */
-  function handleMyStories() {
-    navigation.navigate('MyStories');
-  }
-
-  /**
    * Navigates to Settings screen
    */
   function handleSettings() {
-    // TODO: Navigate to Settings screen when implemented
-    Alert.alert('Coming Soon', 'Settings feature will be available soon!');
+    navigation.navigate('Settings');
   }
+
+  // Helper to display username in title case
+  function toTitleCase(str: string) {
+    return str.replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+  const displayUsername = (user as any).username ? toTitleCase((user as any).username) : '';
 
   if (!user) {
     return (
@@ -120,83 +133,106 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <ScrollView className="flex-1">
-        {/* Header */}
-        <View className="border-b border-gray-200 bg-white px-6 py-4">
-          <Text className="text-2xl font-bold text-gray-800">Profile</Text>
-        </View>
-
         {/* Profile Info Card */}
-        <View className="p-6">
-          <Card className="p-6">
-            {/* Avatar Section */}
-            <View className="mb-6 items-center">
-              <View className="mb-4 h-24 w-24 items-center justify-center rounded-full bg-purple-500">
-                <Text className="text-3xl font-bold text-white">
-                  {user.username?.charAt(0).toUpperCase() || 'U'}
-                </Text>
-              </View>
-              <Text className="text-xl font-bold text-gray-800">{user.username}</Text>
-              <Text className="text-gray-500">{user.email}</Text>
+        <View className="px-4 pb-4 pt-4">
+          <View className="flex-row items-center">
+            <View className="w-24 flex-shrink-0 items-center justify-center">
+              {(user as any).avatar_url ? (
+                <Image
+                  source={{ uri: (user as any).avatar_url }}
+                  className="h-24 w-24 rounded-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <View className="h-24 w-24 items-center justify-center rounded-full bg-brand">
+                  <Text className="font-heading text-4xl font-bold text-white">
+                    {user.username?.charAt(0).toUpperCase() || 'U'}
+                  </Text>
+                </View>
+              )}
             </View>
-
-            {/* User Stats */}
-            <View className="mb-6 flex-row justify-around">
+            <View className="ml-4 flex-grow flex-row items-center justify-around">
               <View className="items-center">
-                <Text className="text-2xl font-bold text-purple-600">
-                  {isLoading ? '...' : friendCount}
-                </Text>
-                <Text className="text-sm text-gray-500">Friends</Text>
-              </View>
-              <View className="items-center">
-                <Text className="text-2xl font-bold text-purple-600">
-                  {isLoading ? '...' : snapCount}
-                </Text>
-                <Text className="text-sm text-gray-500">Snaps Sent</Text>
-              </View>
-              <View className="items-center">
-                <Text className="text-2xl font-bold text-purple-600">
+                <Text className="text-text-primary font-heading text-lg font-bold">
                   {isLoading ? '...' : storyCount}
                 </Text>
-                <Text className="text-sm text-gray-500">Stories</Text>
+                <Text className="text-text-secondary text-xs">Stories</Text>
+              </View>
+              <View className="items-center">
+                <Text className="text-text-primary font-heading text-lg font-bold">
+                  {isLoading ? '...' : friendCount}
+                </Text>
+                <Text className="text-text-secondary text-xs">Friends</Text>
+              </View>
+              <View className="items-center">
+                <Text className="text-text-primary font-heading text-lg font-bold">12</Text>
+                <Text className="text-text-secondary text-xs">Vibes</Text>
               </View>
             </View>
-          </Card>
-        </View>
-
-        {/* Action Buttons */}
-        <View className="space-y-4 px-6">
-          <Button
-            label="Add Friends"
-            variant="primary"
-            onPress={handleAddFriends}
-            className="w-full"
-          />
-
-          <Button
-            label="My Stories"
-            variant="secondary"
-            onPress={handleMyStories}
-            className="w-full"
-          />
-
-          <Button
-            label="Settings"
-            variant="secondary"
-            onPress={handleSettings}
-            className="w-full"
-          />
-
-          <Button label="Logout" variant="text" onPress={handleLogout} className="w-full" />
-        </View>
-
-        {/* App Info */}
-        <View className="mt-8 p-6">
-          <Card className="p-4">
-            <Text className="text-center text-sm text-gray-500">SnapDog v1.0.0</Text>
-            <Text className="mt-1 text-center text-xs text-gray-400">
-              Built with React Native & Expo
+          </View>
+          {/* Name, Handle, and Bio Section */}
+          <View className="pt-4">
+            <Text className="text-text-primary font-heading text-base font-bold">
+              {(user as any).displayName || displayUsername || 'User'}
             </Text>
-          </Card>
+            <Text className="text-text-secondary text-sm">@{user.username || 'username'}</Text>
+            <Text className="text-text-primary mt-2 text-base">
+              {(user as any).bio ||
+                'Lover of squeaky toys & long walks on the beach. Professional napper. Send snacks.'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Action Buttons Section */}
+        {user.id === (user as any).id ? (
+          // Own profile: Edit Profile and Add Friends, less prominent
+          <View className="flex-row justify-center gap-4 px-4 pb-4">
+            <Button
+              label="Edit Profile"
+              variant="secondary"
+              onPress={() => navigation.navigate('Settings')}
+              className="flex-1 rounded-xl bg-gray-200 py-2 text-sm text-gray-700"
+            />
+            <Button
+              label="Add Friends"
+              variant="secondary"
+              onPress={handleAddFriends}
+              className="flex-1 rounded-xl bg-gray-200 py-2 text-sm text-gray-700"
+            />
+          </View>
+        ) : (
+          // Friend or potential friend profile: Add Friend and Send Snap, bold CTAs
+          <View className="flex-row justify-center gap-4 px-4 pb-4">
+            <Button
+              label="Add Friend"
+              variant="primary"
+              onPress={handleAddFriends}
+              className="flex-1 rounded-xl py-2 text-sm shadow-lg"
+            />
+            <Button
+              label="Send Snap"
+              variant="secondary"
+              onPress={() => {}}
+              className="text-brand-red flex-1 rounded-xl bg-brand-light py-2 text-sm"
+            />
+          </View>
+        )}
+
+        {/* Tab Navigation */}
+        <View className="border-b border-gray-200">
+          <View className="flex-row justify-around">
+            <TouchableOpacity className="border-text-primary flex-1 items-center border-b-2 py-3 text-center">
+              <MaterialCommunityIcons name="view-grid" size={24} color="#2D2D2D" />
+            </TouchableOpacity>
+            <TouchableOpacity className="flex-1 items-center py-3 text-center">
+              <MaterialCommunityIcons name="account-group-outline" size={24} color="#AAB0B7" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Content Grid Section */}
+        <View className="px-1 pb-4 pt-1">
+          <StoriesGrid stories={userStories} />
         </View>
       </ScrollView>
     </SafeAreaView>

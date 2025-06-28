@@ -38,19 +38,26 @@ export async function checkUsernameAvailability(username: string): Promise<boole
  */
 export async function upsertUserProfile(
   userId: string,
-  profileData: { username: string; dateOfBirth: string },
+  profileData: {
+    username: string;
+    bio?: string;
+    avatar_url?: string;
+    email?: string;
+    dateOfBirth?: string;
+  },
 ) {
   try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: userId,
-        username: profileData.username.toLowerCase(),
-        date_of_birth: profileData.dateOfBirth,
-        updated_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+    const upsertData: any = {
+      id: userId,
+      username: profileData.username.toLowerCase(),
+      updated_at: new Date().toISOString(),
+    };
+    if (profileData.bio !== undefined) upsertData.bio = profileData.bio;
+    if (profileData.avatar_url !== undefined) upsertData.avatar_url = profileData.avatar_url;
+    if (profileData.email !== undefined) upsertData.email = profileData.email;
+    if (profileData.dateOfBirth !== undefined) upsertData.date_of_birth = profileData.dateOfBirth;
+
+    const { data, error } = await supabase.from('profiles').upsert(upsertData).select().single();
 
     if (error) {
       console.error('Error upserting user profile:', error);

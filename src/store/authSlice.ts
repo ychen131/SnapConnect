@@ -13,6 +13,9 @@ export interface AuthState {
     email: string;
     username?: string;
     dateOfBirth?: string;
+    bio?: string;
+    avatar_url?: string;
+    [key: string]: any;
   } | null;
   isLoading: boolean;
   error: string | null;
@@ -40,6 +43,9 @@ const authSlice = createSlice({
         email: string;
         username?: string;
         dateOfBirth?: string;
+        bio?: string;
+        avatar_url?: string;
+        [key: string]: any;
       } | null>,
     ) {
       state.user = action.payload;

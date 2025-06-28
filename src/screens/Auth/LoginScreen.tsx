@@ -7,6 +7,7 @@ import { View, Text } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { setUser } from '../../store/authSlice';
 import { signIn, signUp } from '../../services/authService';
+import { getUserProfile } from '../../services/userService';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
@@ -30,7 +31,13 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     if (error) {
       setMessage(`Login error: ${error.message}`);
     } else if (data?.user) {
-      dispatch(setUser({ id: data.user.id, email: data.user.email ?? '' }));
+      // Fetch full user profile from Supabase
+      const { data: profile } = await getUserProfile(data.user.id);
+      if (profile) {
+        dispatch(setUser(profile));
+      } else {
+        dispatch(setUser({ id: data.user.id, email: data.user.email ?? '' }));
+      }
       setMessage('Login successful!');
     }
   }
