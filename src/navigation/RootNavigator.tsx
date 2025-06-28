@@ -10,6 +10,7 @@ import type { RootState } from '../store';
 import LoginScreen from '../screens/Auth/LoginScreen';
 import SignupScreen from '../screens/Auth/SignupScreen';
 import MainNavigator from './MainNavigator';
+import { navigationRef } from './navigationRef';
 
 /**
  * AuthNavigator handles navigation between login and signup screens.
@@ -33,7 +34,7 @@ export default function RootNavigator() {
   const isSignedIn = !!user;
   const Stack = createNativeStackNavigator();
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isSignedIn ? (
           <Stack.Screen name="Main" component={MainNavigator} />
