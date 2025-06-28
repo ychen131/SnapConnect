@@ -18,10 +18,14 @@ export function subscribeToAllMessages(
   onNewMessage: (payload: any) => void,
   onNewSnap: (payload: any) => void,
 ) {
+  console.log('📡 Setting up message subscription for user:', userId);
+
   if (messageChannel) {
+    console.log('🔄 Unsubscribing from existing message channel');
     messageChannel.unsubscribe();
     messageChannel = null;
   }
+
   messageChannel = supabase
     .channel('messages-realtime')
     .on(
@@ -33,16 +37,27 @@ export function subscribeToAllMessages(
         filter: `recipient_id=eq.${userId}`,
       },
       (payload: any) => {
+        console.log('📡 Message subscription event received:', payload);
         // Route based on message_type
         if (payload.new?.message_type === 'text') {
+          console.log('📨 Routing to message handler');
           onNewMessage(payload);
         } else if (payload.new?.message_type === 'photo' || payload.new?.message_type === 'video') {
+          console.log('📸 Routing to snap handler');
           onNewSnap(payload);
+        } else {
+          console.log('⚠️ Unknown message type:', payload.new?.message_type);
         }
       },
     )
     .subscribe((status: any) => {
+      console.log('📡 Message subscription status:', status);
       if (status === 'SUBSCRIBED') {
+        console.log('✅ Message subscription established successfully');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('❌ Message subscription error');
+      } else if (status === 'TIMED_OUT') {
+        console.error('❌ Message subscription timed out');
       }
     });
 }

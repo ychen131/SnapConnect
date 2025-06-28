@@ -30,14 +30,20 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
   const hasUnreadMessages = () => {
     // Check if there are any snap notifications
     if (unreadSnaps.length > 0) {
+      console.log('🔴 Chat tab red dot: Snap notifications found:', unreadSnaps.length);
       return true;
     }
 
     // Check if there are any message notifications
     if (realtimeState.newMessageNotifications.length > 0) {
+      console.log(
+        '🔴 Chat tab red dot: Message notifications found:',
+        realtimeState.newMessageNotifications.length,
+      );
       return true;
     }
 
+    console.log('🔴 Chat tab red dot: No notifications found');
     return false;
   };
 
@@ -45,6 +51,23 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
 
   // Check for story notifications
   const hasUnreadStories = realtimeState.newStoryNotifications.length > 0;
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('🔴 CustomTabBar state:', {
+      snapNotifications: unreadSnaps.length,
+      messageNotifications: realtimeState.newMessageNotifications.length,
+      storyNotifications: realtimeState.newStoryNotifications.length,
+      shouldShowRedDot,
+      hasUnreadStories,
+    });
+  }, [
+    unreadSnaps.length,
+    realtimeState.newMessageNotifications.length,
+    realtimeState.newStoryNotifications.length,
+    shouldShowRedDot,
+    hasUnreadStories,
+  ]);
 
   return (
     <View
@@ -73,11 +96,13 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
           if (!isFocused && !event.defaultPrevented) {
             // Clear all notifications when Chat tab is pressed
             if (route.name === 'Chat' && shouldShowRedDot) {
+              console.log('🧹 Clearing all notifications when Chat tab pressed');
               clearAllNotifications();
             }
 
             // Clear story notifications when Stories tab is pressed
             if (route.name === 'Stories' && hasUnreadStories) {
+              console.log('🧹 Clearing story notifications when Stories tab pressed');
               clearAllStoryNotifications();
             }
 

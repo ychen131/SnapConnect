@@ -50,9 +50,11 @@ export async function initializeRealtimeSubscriptions(userId: string): Promise<v
     subscribeToAllMessages(
       userId,
       (payload) => {
+        console.log('📨 Message handler called with payload:', payload);
         handleNewMessage(payload);
       },
       (payload) => {
+        console.log('📸 Snap handler called with payload:', payload);
         handleNewSnap(payload);
       },
     );
@@ -61,9 +63,11 @@ export async function initializeRealtimeSubscriptions(userId: string): Promise<v
     subscribeToStories(
       userId,
       (payload) => {
+        console.log('📖 Story handler called with payload:', payload);
         handleNewStory(payload);
       },
       (payload) => {
+        console.log('📖 Story update handler called with payload:', payload);
         handleStoryUpdate(payload);
       },
     );
@@ -77,6 +81,16 @@ export async function initializeRealtimeSubscriptions(userId: string): Promise<v
 
     isInitialized = true;
     console.log('✅ Realtime subscriptions initialized successfully');
+
+    // Log current state after initialization
+    const state = store.getState();
+    console.log('🔍 Current realtime state after initialization:', {
+      isConnected: state.realtime.isConnected,
+      activeSubscriptions: state.realtime.activeSubscriptions,
+      messageNotifications: state.realtime.newMessageNotifications.length,
+      snapNotifications: state.realtime.newSnapNotifications.length,
+      storyNotifications: state.realtime.newStoryNotifications.length,
+    });
   } catch (error) {
     console.error('❌ Error initializing realtime subscriptions:', error);
     store.dispatch(setError(error instanceof Error ? error.message : 'Unknown error'));
@@ -114,7 +128,12 @@ async function handleNewMessage(payload: any): Promise<void> {
   try {
     console.log('📨 New message received:', payload);
 
-    if (payload.eventType !== 'INSERT') {
+    // Check for different possible event structures
+    const eventType = payload.eventType || payload.event || 'INSERT';
+    console.log('📨 Event type:', eventType);
+
+    if (eventType !== 'INSERT') {
+      console.log('📨 Skipping non-INSERT event:', eventType);
       return;
     }
 
@@ -123,6 +142,13 @@ async function handleNewMessage(payload: any): Promise<void> {
       console.warn('⚠️ No message data in payload');
       return;
     }
+
+    console.log('📨 Message data:', {
+      conversationId: newMessage.conversation_id,
+      messageType: newMessage.message_type,
+      content: newMessage.content,
+      createdAt: newMessage.created_at,
+    });
 
     // Add notification to Redux state
     store.dispatch(
@@ -160,7 +186,12 @@ async function handleNewSnap(payload: any): Promise<void> {
   try {
     console.log('📸 New snap received:', payload);
 
-    if (payload.eventType !== 'INSERT') {
+    // Check for different possible event structures
+    const eventType = payload.eventType || payload.event || 'INSERT';
+    console.log('📸 Event type:', eventType);
+
+    if (eventType !== 'INSERT') {
+      console.log('📸 Skipping non-INSERT event:', eventType);
       return;
     }
 
@@ -170,17 +201,19 @@ async function handleNewSnap(payload: any): Promise<void> {
       return;
     }
 
-    // Only handle photo/video messages (snaps)
-    if (newSnap.message_type !== 'photo' && newSnap.message_type !== 'video') {
-      return;
-    }
+    console.log('📸 Snap data:', {
+      conversationId: newSnap.conversation_id,
+      messageType: newSnap.message_type,
+      mediaUrl: newSnap.media_url,
+      createdAt: newSnap.created_at,
+    });
 
-    // Get sender username for notification
+    // Get sender's username
     let senderUsername = 'Unknown User';
     try {
-      const { data: sender } = await getUserProfile(newSnap.sender_id);
-      if (sender) {
-        senderUsername = sender.username || 'Unknown User';
+      const { data: userData } = await getUserProfile(newSnap.sender_id);
+      if (userData) {
+        senderUsername = userData.username || 'Unknown User';
       }
     } catch (error) {
       console.error('Error fetching sender username:', error);
@@ -193,7 +226,7 @@ async function handleNewSnap(payload: any): Promise<void> {
         senderUsername,
         snapId: newSnap.id,
         mediaType: newSnap.message_type as 'photo' | 'video',
-        timer: newSnap.timer,
+        timer: newSnap.timer || undefined,
         receivedAt: newSnap.created_at,
       }),
     );
@@ -203,6 +236,16 @@ async function handleNewSnap(payload: any): Promise<void> {
       '🔴 Current snap notifications count:',
       store.getState().realtime.newSnapNotifications.length,
     );
+
+    // Optionally refresh conversations list
+    const state = store.getState();
+    const currentUserId = state.auth.user?.id;
+    if (currentUserId) {
+      // Refresh conversations in background (don't await to avoid blocking)
+      getConversations(currentUserId).catch((error) => {
+        console.error('Error refreshing conversations after new snap:', error);
+      });
+    }
   } catch (error) {
     console.error('❌ Error handling new snap:', error);
   }
@@ -214,7 +257,7 @@ async function handleNewSnap(payload: any): Promise<void> {
  */
 async function handleNewStory(payload: any): Promise<void> {
   try {
-    console.log('�� New story received via realtime:', payload);
+    console.log('📖 New story received via realtime:', payload);
 
     if (payload.eventType !== 'INSERT') {
       console.log('📖 Not an INSERT event, skipping');
@@ -455,4 +498,32 @@ export function clearAllNotifications(): void {
     'Stories:',
     store.getState().realtime.newStoryNotifications.length,
   );
+}
+
+/**
+ * Manually reinitialize realtime subscriptions (for debugging).
+ * @param userId The current user's ID
+ */
+export async function reinitializeRealtimeSubscriptions(userId: string): Promise<void> {
+  console.log('🔄 Manually reinitializing realtime subscriptions...');
+  cleanupRealtimeSubscriptions();
+  await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait a bit
+  await initializeRealtimeSubscriptions(userId);
+}
+
+/**
+ * Get debug information about current realtime state.
+ * @returns Debug information object
+ */
+export function getRealtimeDebugInfo() {
+  const state = store.getState();
+  return {
+    isConnected: state.realtime.isConnected,
+    activeSubscriptions: state.realtime.activeSubscriptions,
+    messageNotifications: state.realtime.newMessageNotifications,
+    snapNotifications: state.realtime.newSnapNotifications,
+    storyNotifications: state.realtime.newStoryNotifications,
+    error: state.realtime.error,
+    isInitialized,
+  };
 }

@@ -22,6 +22,7 @@ import {
   clearAllMessageNotifications,
 } from '../../services/realtimeService';
 import { clearAllMessageNotifications as clearAllMessageNotificationsSlice } from '../../store/realtimeSlice';
+import DebugInfo from '../../components/DebugInfo';
 
 /**
  * Displays a list of chat conversations for the current user
@@ -235,6 +236,9 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
       />
+
+      {/* Debug Info Component */}
+      <DebugInfo />
     </View>
   );
 }
