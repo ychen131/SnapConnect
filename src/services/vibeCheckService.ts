@@ -38,6 +38,14 @@ interface ImageDimensions {
   height: number;
 }
 
+// Confidence level handling types
+interface ConfidenceLevel {
+  level: 'high' | 'medium' | 'low' | 'very_low';
+  message: string;
+  shouldProceed: boolean;
+  showWarning: boolean;
+}
+
 /**
  * Validates image quality before sending to API
  * @param imageBase64 Base64 encoded image string
@@ -142,4 +150,106 @@ export async function analyzeDogImageWithValidation(
 
   // Proceed with analysis
   return analyzeDogImage(imageBase64, userId);
+}
+
+/**
+ * Processes confidence score and returns appropriate handling strategy
+ * @param confidence Confidence score from 0 to 1
+ * @returns Confidence level with user feedback and handling instructions
+ */
+export function processConfidenceLevel(confidence: number): ConfidenceLevel {
+  if (confidence >= 0.7) {
+    return {
+      level: 'high',
+      message: 'High confidence analysis',
+      shouldProceed: true,
+      showWarning: false,
+    };
+  } else if (confidence >= 0.5) {
+    return {
+      level: 'medium',
+      message: 'Moderate confidence - analysis may be less accurate',
+      shouldProceed: true,
+      showWarning: true,
+    };
+  } else if (confidence >= 0.3) {
+    return {
+      level: 'low',
+      message: 'Low confidence - please try a clearer photo',
+      shouldProceed: true,
+      showWarning: true,
+    };
+  } else {
+    return {
+      level: 'very_low',
+      message: 'Image unclear - please try a better photo',
+      shouldProceed: false,
+      showWarning: false,
+    };
+  }
+}
+
+/**
+ * Enhanced analyzeDogImage with confidence level handling
+ * @param imageBase64 Base64 encoded image string
+ * @param userId User identifier
+ * @returns Promise with vibe check analysis result and confidence handling
+ */
+export async function analyzeDogImageWithConfidenceHandling(
+  imageBase64: string,
+  userId: string,
+): Promise<{
+  result: VibeCheckResponse;
+  confidenceLevel: ConfidenceLevel;
+  shouldRetry: boolean;
+}> {
+  try {
+    // First validate image quality
+    const validation = validateImageQuality(imageBase64);
+
+    if (!validation.isValid) {
+      throw new Error(`Image quality validation failed: ${validation.errors.join(', ')}`);
+    }
+
+    // Proceed with analysis
+    const result = await analyzeDogImage(imageBase64, userId);
+
+    // Process confidence level
+    const confidenceLevel = processConfidenceLevel(result.confidence);
+
+    // Log confidence for debugging (hidden from UI)
+    console.log(`[DEBUG] Confidence score: ${result.confidence}, Level: ${confidenceLevel.level}`);
+
+    // Determine if user should retry
+    const shouldRetry = !confidenceLevel.shouldProceed;
+
+    return {
+      result,
+      confidenceLevel,
+      shouldRetry,
+    };
+  } catch (error) {
+    // Re-throw the error for the UI to handle
+    throw error;
+  }
+}
+
+/**
+ * Gets user-friendly message based on confidence level
+ * @param confidenceLevel Processed confidence level
+ * @returns User-friendly message for display
+ */
+export function getConfidenceUserMessage(confidenceLevel: ConfidenceLevel): string {
+  switch (confidenceLevel.level) {
+    case 'high':
+      return '';
+    case 'medium':
+      return 'Analysis completed, but a clearer photo might give better results.';
+    case 'low':
+      return 'The photo is a bit unclear. Try taking a photo in better lighting or closer to your dog.';
+    case 'very_low':
+      return 'The image is too unclear to analyze. Please try a better photo with good lighting.';
+    default:
+      return '';
+  }
 }
