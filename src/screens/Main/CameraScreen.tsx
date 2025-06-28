@@ -1031,6 +1031,7 @@ export default function CameraScreen() {
             error={vibeCheckError || undefined}
             onRetry={handleVibeCheckPress}
             photoUri={photoUri}
+            isSuccess={!!vibeCheckResult?.short_summary && !isVibeChecking && !vibeCheckError}
           />
         )}
 

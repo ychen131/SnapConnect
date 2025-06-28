@@ -15,10 +15,17 @@ import {
   Share,
   Platform,
   Alert,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 /**
  * Props for VibeCheckReport
@@ -48,6 +55,38 @@ function preprocessMarkdown(markdown: string): string {
 }
 
 /**
+ * Splits the markdown report into sections by ### headers
+ * Returns an array of { title, content }
+ * Filters out unwanted sections.
+ */
+function splitMarkdownSections(markdown: string) {
+  const lines = preprocessMarkdown(markdown).split('\n');
+  const sections: { title: string; content: string }[] = [];
+  let currentTitle = '';
+  let currentContent: string[] = [];
+  lines.forEach((line) => {
+    if (line.match(/^### /)) {
+      if (currentTitle) {
+        sections.push({ title: currentTitle, content: currentContent.join('\n').trim() });
+      }
+      currentTitle = line.replace(/^### /, '').trim();
+      currentContent = [];
+    } else {
+      currentContent.push(line);
+    }
+  });
+  if (currentTitle) {
+    sections.push({ title: currentTitle, content: currentContent.join('\n').trim() });
+  }
+  // Filter out unwanted sections
+  const hiddenTitles = ['Vibe Check Report', 'Behavioral Context', 'Comfort & Well-being Level'];
+  return sections.filter(
+    (section) =>
+      !hiddenTitles.some((hidden) => section.title.toLowerCase() === hidden.toLowerCase()),
+  );
+}
+
+/**
  * Bottom sheet/modal for displaying the detailed Vibe Check markdown report
  */
 export default function VibeCheckReport({
@@ -58,6 +97,13 @@ export default function VibeCheckReport({
 }: VibeCheckReportProps) {
   const [isPhotoModalVisible, setPhotoModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const sections = splitMarkdownSections(report);
+  // Find the index of 'Emotional State Assessment', default to 0
+  const defaultExpanded = Math.max(
+    0,
+    sections.findIndex((s) => s.title.toLowerCase().includes('emotional state assessment')),
+  );
+  const [expandedSection, setExpandedSection] = useState(defaultExpanded);
   const screen = Dimensions.get('window');
 
   // Download photo handler
@@ -101,6 +147,11 @@ export default function VibeCheckReport({
     }
   }
 
+  function handleToggleSection(idx: number) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedSection(idx === expandedSection ? -1 : idx);
+  }
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -131,9 +182,27 @@ export default function VibeCheckReport({
             </TouchableOpacity>
           </View>
 
-          {/* Markdown Report */}
+          {/* Expandable Markdown Sections */}
           <ScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: 32 }}>
-            <Markdown style={markdownStyles}>{preprocessMarkdown(report)}</Markdown>
+            {sections.map((section, idx) => (
+              <View key={idx} style={styles.sectionContainer}>
+                <TouchableOpacity
+                  style={styles.sectionHeader}
+                  onPress={() => handleToggleSection(idx)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.sectionHeaderText}>
+                    {section.title}
+                    {expandedSection === idx ? ' ▼' : ' ▶'}
+                  </Text>
+                </TouchableOpacity>
+                {expandedSection === idx && (
+                  <View style={styles.sectionContent}>
+                    <Markdown style={markdownStyles}>{section.content}</Markdown>
+                  </View>
+                )}
+              </View>
+            ))}
           </ScrollView>
         </View>
 
@@ -233,6 +302,29 @@ const styles = StyleSheet.create({
   },
   scroll: {
     marginTop: 32,
+  },
+  sectionContainer: {
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: '#faf8f2',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#f3e7c9',
+  },
+  sectionHeader: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#fffbe6',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3e7c9',
+  },
+  sectionHeaderText: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#bfa100',
+  },
+  sectionContent: {
+    padding: 16,
   },
   fullscreenOverlay: {
     flex: 1,

@@ -32,6 +32,7 @@ import Animated, {
  * @param isLoading Whether the Vibe Check is currently loading
  * @param error Error message if the Vibe Check failed
  * @param onRetry Callback to retry the Vibe Check
+ * @param isSuccess Whether the Vibe Check just completed successfully (for animation)
  */
 interface VibeCheckStickerProps {
   summary: string;
@@ -42,6 +43,7 @@ interface VibeCheckStickerProps {
   isLoading?: boolean;
   error?: string;
   onRetry?: () => void;
+  isSuccess?: boolean;
 }
 
 /**
@@ -56,8 +58,10 @@ export default function VibeCheckSticker({
   isLoading = false,
   error,
   onRetry,
+  isSuccess = false,
 }: VibeCheckStickerProps) {
   const [selected, setSelected] = useState(false);
+  const [showSparkle, setShowSparkle] = useState(false);
 
   // Shared values for position and scale
   const translateX = useSharedValue(initialPosition.x);
@@ -72,6 +76,7 @@ export default function VibeCheckSticker({
   const hoverScale = useSharedValue(1);
   const loadingRotation = useSharedValue(0);
   const errorShake = useSharedValue(0);
+  const successPulse = useSharedValue(1);
 
   // Error shake animation
   useEffect(() => {
@@ -94,6 +99,19 @@ export default function VibeCheckSticker({
       loadingRotation.value = withTiming(0, { duration: 200 });
     }
   }, [isLoading]);
+
+  // Play success animation when isSuccess changes from false to true
+  useEffect(() => {
+    if (isSuccess) {
+      setShowSparkle(true);
+      successPulse.value = 1.2;
+      setTimeout(() => {
+        successPulse.value = 1;
+        setShowSparkle(false);
+      }, 600);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuccess]);
 
   // Share functionality
   const handleShare = async () => {
@@ -182,7 +200,11 @@ export default function VibeCheckSticker({
     transform: [
       { translateX: withSpring(translateX.value + errorShake.value) },
       { translateY: withSpring(translateY.value) },
-      { scale: withSpring(scale.value * entranceScale.value * hoverScale.value) },
+      {
+        scale: withSpring(
+          scale.value * entranceScale.value * hoverScale.value * successPulse.value,
+        ),
+      },
     ],
     opacity: opacity.value,
   }));
@@ -215,6 +237,24 @@ export default function VibeCheckSticker({
       <Animated.View style={[styles.sticker, animatedStyle, glowStyle]}>
         <PinchGestureHandler onGestureEvent={pinchGesture}>
           <Animated.View style={[styles.innerSticker, error && styles.errorSticker]}>
+            {/* Sparkle burst effect on success */}
+            {showSparkle && (
+              <View style={styles.sparkleBurstContainer} pointerEvents="none">
+                {[...Array(8)].map((_, i) => (
+                  <Animated.View
+                    key={i}
+                    style={[
+                      styles.sparkleBurst,
+                      {
+                        transform: [{ rotate: `${i * 45}deg` }, { translateY: -24 }],
+                      },
+                    ]}
+                  >
+                    <Text style={styles.sparkleBurstText}>✨</Text>
+                  </Animated.View>
+                ))}
+              </View>
+            )}
             {/* Sparkle effect */}
             <Animated.View style={[styles.sparkle, sparkleStyle]}>
               <Text style={styles.sparkleText}>✨</Text>
@@ -425,5 +465,31 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  sparkleBurstContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sparkleBurst: {
+    position: 'absolute',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    opacity: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sparkleBurstText: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    textShadowColor: '#fff',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
 });
