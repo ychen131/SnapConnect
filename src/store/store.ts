@@ -7,6 +7,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import counterReducer from './counterSlice';
 import authReducer from './authSlice';
 import realtimeReducer from './realtimeSlice';
+import vibeCheckReducer from './vibeCheckSlice';
 
 /**
  * The main Redux store for the app.
@@ -16,6 +17,7 @@ export const store = configureStore({
     counter: counterReducer,
     auth: authReducer,
     realtime: realtimeReducer,
+    vibeCheck: vibeCheckReducer,
   },
   // devTools: process.env.NODE_ENV !== 'production', // Uncomment to customize
 });

@@ -16,13 +16,16 @@ import { CameraView, CameraType } from 'expo-camera';
 import { useCameraPermission } from '../../services/permissionService';
 import { Video, ResizeMode } from 'expo-av';
 import { useNavigation } from '@react-navigation/native';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CameraStackParamList } from '../../navigation/types';
 import { RootState } from '../../store';
 import { addToStory } from '../../services/storyService';
 import { uploadMediaToStorage } from '../../services/snapService';
 import { analyzeDogImageWithValidation } from '../../services/vibeCheckService';
+import { performVibeCheck } from '../../store/vibeCheckSlice';
+import { clearVibeCheck, getErrorInfo } from '../../store/vibeCheckSlice';
+import type { AppDispatch } from '../../store/store';
 import PhotoEditingToolbar from '../../components/camera/PhotoEditingToolbar';
 import TextOverlay from '../../components/camera/TextOverlay';
 import TextEditModal from '../../components/camera/TextEditModal';
@@ -41,6 +44,7 @@ import { ImageFormat } from '@shopify/react-native-skia';
 import Toast from '../../components/ui/Toast';
 import VibeCheckSticker from '../../components/editor/VibeCheckSticker';
 import VibeCheckReport from '../../components/report/VibeCheckReport';
+import { checkNetworkConnectivity, isNetworkError } from '../../utils/networkUtils';
 
 type CameraScreenNavigationProp = NativeStackNavigationProp<CameraStackParamList, 'CameraMain'>;
 
@@ -87,6 +91,23 @@ export default function CameraScreen() {
   const navigation = useNavigation<CameraScreenNavigationProp>();
   const user = useSelector((state: RootState) => state.auth.user);
   const filteredImageRef = useRef<any>(null);
+  const dispatch = useDispatch<AppDispatch>();
+
+  // Redux state selectors
+  const vibeCheckState = useSelector((state: RootState) => state.vibeCheck);
+  const {
+    status,
+    shortSummary,
+    detailedReport,
+    sourceURL,
+    confidence,
+    error,
+    retryCount,
+    lastErrorType,
+  } = vibeCheckState;
+
+  // Calculate error info for UI
+  const errorInfo = lastErrorType ? getErrorInfo(lastErrorType, retryCount) : null;
 
   // Edit history stack for undo/redo
   interface EditState {
@@ -103,14 +124,12 @@ export default function CameraScreen() {
     overlays: TextOverlayType[];
   } | null>(null);
 
-  // Vibe Check state
-  const [isVibeChecking, setIsVibeChecking] = useState(false);
-  const [vibeCheckResult, setVibeCheckResult] = useState<any>(null);
-  const [vibeCheckError, setVibeCheckError] = useState<string | null>(null);
+  // Toast state (keep local for UI feedback)
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'info' | 'success' | 'error'>('info');
   const [showReport, setShowReport] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
 
   // Initialize history when a photo is taken
   useEffect(() => {
@@ -126,6 +145,22 @@ export default function CameraScreen() {
       setHistoryIndex(-1);
     }
   }, [photoUri]);
+
+  // Check network connectivity periodically
+  useEffect(() => {
+    const checkNetwork = async () => {
+      const isConnected = await checkNetworkConnectivity();
+      setIsOffline(!isConnected);
+    };
+
+    // Check immediately
+    checkNetwork();
+
+    // Check every 30 seconds
+    const interval = setInterval(checkNetwork, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   if (!permission) {
     return (
@@ -800,9 +835,14 @@ export default function CameraScreen() {
     }
 
     try {
-      setIsVibeChecking(true);
-      setVibeCheckError(null);
-      setVibeCheckResult(null);
+      // Check network connectivity first
+      const isConnected = await checkNetworkConnectivity();
+      if (!isConnected) {
+        setToastMessage('No internet connection. Please check your network settings.');
+        setToastType('error');
+        setToastVisible(true);
+        return;
+      }
 
       // Show loading toast
       setToastMessage("Checking your pup's vibe... 🐾");
@@ -816,11 +856,12 @@ export default function CameraScreen() {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      // Call Vibe Check service
-      const result = await analyzeDogImageWithValidation(base64Image, user.id);
+      // Dispatch Redux thunk
+      const result = await dispatch(
+        performVibeCheck({ imageBase64: base64Image, userId: user.id }),
+      ).unwrap();
 
       console.log('✅ Vibe Check completed:', result);
-      setVibeCheckResult(result);
 
       // Show success toast
       setToastMessage(`Vibe Check Complete! ${result.short_summary}`);
@@ -828,14 +869,23 @@ export default function CameraScreen() {
       setToastVisible(true);
     } catch (error) {
       console.error('❌ Vibe Check failed:', error);
-      setVibeCheckError((error as Error).message);
 
-      // Show error toast
-      setToastMessage(`Vibe Check Failed: ${(error as Error).message}`);
+      // Determine if it's a network error
+      const isNetworkIssue = isNetworkError(error as Error);
+
+      // Show appropriate error message
+      let errorMessage = 'Vibe Check failed. Please try again.';
+      if (isNetworkIssue) {
+        errorMessage =
+          'Network connection issue. Please check your internet connection and try again.';
+      } else {
+        const errorObj = error as any;
+        errorMessage = errorObj?.message || 'Something went wrong. Please try again.';
+      }
+
+      setToastMessage(errorMessage);
       setToastType('error');
       setToastVisible(true);
-    } finally {
-      setIsVibeChecking(false);
     }
   }
 
@@ -874,9 +924,7 @@ export default function CameraScreen() {
               // Reset all relevant state to return to camera view
               setPhotoUri(null);
               setVideoUri(null);
-              setVibeCheckResult(null);
-              setVibeCheckError(null);
-              setIsVibeChecking(false);
+              dispatch(clearVibeCheck());
               setShowReport(false);
               setIsEditMode(false);
               setSelectedTextId(null);
@@ -894,19 +942,51 @@ export default function CameraScreen() {
           <View className="flex-row items-center space-x-2">
             {/* Vibe Check Button */}
             <TouchableOpacity
-              className="flex-row items-center rounded-full bg-yellow-400 px-4 py-2"
+              className={`flex-row items-center rounded-full px-4 py-2 ${
+                isOffline
+                  ? 'bg-gray-400'
+                  : status === 'loading'
+                    ? 'bg-yellow-400'
+                    : status === 'failed' && errorInfo?.canRetry
+                      ? 'bg-red-400'
+                      : 'bg-yellow-400'
+              }`}
               onPress={handleVibeCheckPress}
-              disabled={isVibeChecking}
+              disabled={status === 'loading' || isOffline}
               accessibilityLabel="Vibe Check"
             >
-              {isVibeChecking ? (
+              {status === 'loading' ? (
                 <ActivityIndicator size="small" color="black" />
+              ) : isOffline ? (
+                <Text className="text-lg font-bold" style={{ marginRight: 4 }}>
+                  📡
+                </Text>
+              ) : status === 'failed' && errorInfo ? (
+                <Text className="text-lg font-bold" style={{ marginRight: 4 }}>
+                  {errorInfo.icon}
+                </Text>
               ) : (
                 <Text className="text-lg font-bold" style={{ marginRight: 4 }}>
                   🐾
                 </Text>
               )}
-              <Text className="font-bold text-black">Vibe Check</Text>
+              <Text
+                className={`font-bold ${
+                  isOffline
+                    ? 'text-gray-600'
+                    : status === 'failed' && errorInfo?.canRetry
+                      ? 'text-white'
+                      : 'text-black'
+                }`}
+              >
+                {isOffline
+                  ? 'Offline'
+                  : status === 'loading'
+                    ? 'Checking...'
+                    : status === 'failed' && errorInfo?.canRetry
+                      ? 'Retry'
+                      : 'Vibe Check'}
+              </Text>
             </TouchableOpacity>
 
             {/* Edit Button */}
@@ -957,6 +1037,17 @@ export default function CameraScreen() {
           </View>
         )}
 
+        {/* Offline Indicator */}
+        {isOffline && (
+          <View className="absolute left-0 right-0 top-20 items-center">
+            <View className="rounded-lg bg-orange-500 px-4 py-2">
+              <Text className="text-sm font-semibold text-white">
+                📡 You're offline - Vibe Check unavailable
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Bottom Controls */}
         <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center space-x-4 px-4">
           <TouchableOpacity className="rounded-full bg-gray-600 px-6 py-3" onPress={handleSave}>
@@ -997,7 +1088,7 @@ export default function CameraScreen() {
           canRedo={canRedo}
           hasEdits={hasEdits}
           isSaving={isSaving}
-          isVibeChecking={isVibeChecking}
+          isVibeChecking={status === 'loading'}
           selectedFilter={currentFilter}
           onFilterSelect={handleFilterSelect}
           imageUri={photoUri || undefined}
@@ -1022,16 +1113,16 @@ export default function CameraScreen() {
         />
 
         {/* Vibe Check Sticker (show after Vibe Check attempt - success or error) */}
-        {photoUri && (vibeCheckResult?.short_summary || vibeCheckError) && (
+        {photoUri && (shortSummary || error) && (
           <VibeCheckSticker
-            summary={vibeCheckResult?.short_summary || 'Vibe Check failed'}
+            summary={shortSummary || 'Vibe Check failed'}
             onLearnWhy={() => setShowReport(true)}
             initialPosition={{ x: 100, y: 200 }}
-            isLoading={isVibeChecking}
-            error={vibeCheckError || undefined}
-            onRetry={handleVibeCheckPress}
+            isLoading={status === 'loading'}
+            error={errorInfo?.message || error || undefined}
+            onRetry={errorInfo?.canRetry ? handleVibeCheckPress : undefined}
             photoUri={photoUri}
-            isSuccess={!!vibeCheckResult?.short_summary && !isVibeChecking && !vibeCheckError}
+            isSuccess={!!shortSummary && status === 'succeeded' && !error}
           />
         )}
 
@@ -1039,7 +1130,7 @@ export default function CameraScreen() {
         <VibeCheckReport
           visible={showReport}
           onClose={() => setShowReport(false)}
-          report={vibeCheckResult?.detailed_report || ''}
+          report={detailedReport || ''}
           photoUri={photoUri || undefined}
         />
       </View>
@@ -1088,6 +1179,17 @@ export default function CameraScreen() {
           </View>
         )}
 
+        {/* Offline Indicator */}
+        {isOffline && (
+          <View className="absolute left-0 right-0 top-20 items-center">
+            <View className="rounded-lg bg-orange-500 px-4 py-2">
+              <Text className="text-sm font-semibold text-white">
+                📡 You're offline - Vibe Check unavailable
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Bottom Controls */}
         <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center space-x-4 px-4">
           <TouchableOpacity className="rounded-full bg-gray-600 px-6 py-3" onPress={handleSave}>
@@ -1128,7 +1230,7 @@ export default function CameraScreen() {
           canRedo={canRedo}
           hasEdits={hasEdits}
           isSaving={isSaving}
-          isVibeChecking={isVibeChecking}
+          isVibeChecking={status === 'loading'}
           selectedFilter={currentFilter}
           onFilterSelect={handleFilterSelect}
           imageUri={photoUri || undefined}
