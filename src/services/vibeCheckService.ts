@@ -99,13 +99,56 @@ export async function saveVibeCheckToCloud(
  * @returns Array of vibe check records
  */
 export async function fetchVibeChecksFromCloud(userId: string): Promise<VibeCheckRecord[]> {
-  const { data, error } = await supabase
-    .from('vibe_check_feedback')
-    .select('*')
-    .eq('user_id', userId)
-    .order('request_timestamp', { ascending: false });
-  if (error) throw error;
-  return data || [];
+  console.log('🔍 fetchVibeChecksFromCloud called with userId:', userId);
+
+  try {
+    // First check if we have a valid Supabase client
+    if (!supabase) {
+      console.error('❌ Supabase client is not initialized');
+      throw new Error('Supabase client not initialized');
+    }
+
+    // Check authentication
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError) {
+      console.error('❌ Authentication error:', authError);
+      throw new Error('Authentication failed');
+    }
+
+    if (!user) {
+      console.error('❌ No authenticated user');
+      throw new Error('No authenticated user');
+    }
+
+    console.log('✅ Authenticated user:', user.id);
+    console.log('🔍 Requesting user ID:', userId);
+    console.log('🔍 Current user ID:', user.id);
+
+    // Check if requesting user matches authenticated user (RLS requirement)
+    if (user.id !== userId) {
+      console.warn('⚠️ Requesting vibe checks for different user - this may fail due to RLS');
+    }
+
+    const { data, error } = await supabase
+      .from('vibe_check_feedback')
+      .select('*')
+      .eq('user_id', userId)
+      .order('request_timestamp', { ascending: false });
+
+    if (error) {
+      console.error('❌ Supabase query error:', error);
+      throw error;
+    }
+
+    console.log(`✅ Successfully fetched ${data?.length || 0} vibe checks`);
+    return data || [];
+  } catch (error) {
+    console.error('❌ fetchVibeChecksFromCloud failed:', error);
+    throw error;
+  }
 }
 
 /**

@@ -36,8 +36,10 @@ import {
 } from '../../services/vibeCheckService';
 import tailwindConfig from '../../../tailwind.config';
 import { getUserProfile } from '../../services/userService';
-const brandColor = tailwindConfig.theme.extend.colors.brand.DEFAULT;
-const brandLight = tailwindConfig.theme.extend.colors.brand.light;
+
+// Safely access tailwind config with fallbacks
+const brandColor = (tailwindConfig?.theme?.extend?.colors as any)?.brand?.DEFAULT || '#FFD700';
+const brandLight = (tailwindConfig?.theme?.extend?.colors as any)?.brand?.light || '#FFF8DC';
 
 /**
  * Displays the user's profile with basic information and navigation options.
@@ -130,10 +132,15 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
     setIsLoading(true);
     try {
       console.log('Fetching vibe checks for user:', profileUser.id);
+      console.log('Current logged in user:', loggedInUser?.id);
+      console.log('Is viewing own profile:', isSelf);
+
+      // Fetch vibe checks for any user (own or friend) - RLS policy will handle permissions
       const vibes = await fetchVibeChecksFromCloud(profileUser.id);
       console.log('Fetched vibes:', vibes);
       setCloudVibeChecks(vibes);
     } catch (err) {
+      console.error('Error fetching vibe checks:', err);
       setCloudVibeChecks([]);
     } finally {
       setIsLoading(false);

@@ -12,4 +12,33 @@ import Constants from 'expo-constants';
 const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl as string;
 const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey as string;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Debug logging
+console.log('🔧 Supabase configuration:');
+console.log('URL:', supabaseUrl ? 'Present' : 'Missing');
+console.log('Key:', supabaseAnonKey ? 'Present' : 'Missing');
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Missing Supabase configuration. Check your environment variables.');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});
+
+// Test the connection
+supabase.auth.getSession().then(({ data, error }) => {
+  if (error) {
+    console.error('❌ Supabase session check failed:', error);
+  } else {
+    console.log('✅ Supabase client initialized successfully');
+    if (data.session) {
+      console.log('✅ User session found:', data.session.user.id);
+    } else {
+      console.log('ℹ️ No active user session');
+    }
+  }
+});
