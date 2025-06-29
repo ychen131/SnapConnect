@@ -212,6 +212,38 @@ export function composeImageWithOverlays(
 }
 
 /**
+ * Compose image with Vibe Check sticker
+ * Creates a composite image by overlaying the Vibe Check sticker on the base image
+ */
+export async function composeImageWithVibeCheckSticker(
+  baseImageUri: string,
+  vibeCheckSummary: string,
+  stickerPosition: { x: number; y: number } = { x: 100, y: 200 },
+): Promise<string> {
+  try {
+    console.log('✨ Composing image with Vibe Check sticker...');
+    console.log(`  - Base image: ${baseImageUri}`);
+    console.log(`  - Vibe Check summary: ${vibeCheckSummary}`);
+    console.log(`  - Sticker position: ${stickerPosition.x}, ${stickerPosition.y}`);
+
+    // For now, we'll return the base image since we can't easily render the sticker
+    // In a production app, you would:
+    // 1. Create a canvas or use a library like react-native-view-shot
+    // 2. Render the Vibe Check sticker as a separate image
+    // 3. Overlay it on the base image at the specified position
+    // 4. Return the composite image URI
+
+    console.log('📋 Note: Vibe Check sticker composition will be implemented in a future update');
+    console.log('📋 For now, returning base image - sticker will be rendered in story viewer');
+
+    return baseImageUri;
+  } catch (error) {
+    console.error('❌ Failed to compose image with Vibe Check sticker:', error);
+    return baseImageUri; // Fallback to original image
+  }
+}
+
+/**
  * Save edited image to device gallery
  */
 export function saveEditedImage(imageUri: string): Promise<boolean> {

@@ -18,9 +18,22 @@ export interface Story {
   created_at: string;
   expires_at: string;
   updated_at: string;
+  // Vibe Check metadata
+  vibe_check_summary?: string;
+  vibe_check_confidence?: number;
+  vibe_check_source_url?: string;
   // Computed fields
   user_username: string;
   user_avatar_url?: string;
+}
+
+/**
+ * Vibe Check metadata for stories
+ */
+export interface VibeCheckMetadata {
+  vibe_check_summary: string;
+  vibe_check_confidence: number;
+  vibe_check_source_url: string;
 }
 
 /**
@@ -30,6 +43,7 @@ export interface Story {
  * @param mediaType The type of media ('photo' or 'video')
  * @param timer Optional timer for photos (1-10 seconds)
  * @param isPublic Whether the story is public (default: true)
+ * @param vibeCheckMetadata Optional Vibe Check metadata to include with the story
  * @returns Promise<Story | null> The created story or null if failed
  */
 export async function addToStory(
@@ -38,6 +52,7 @@ export async function addToStory(
   mediaType: 'photo' | 'video',
   timer?: number,
   isPublic: boolean = true,
+  vibeCheckMetadata?: VibeCheckMetadata,
 ): Promise<Story | null> {
   try {
     // Validate inputs
@@ -62,18 +77,33 @@ export async function addToStory(
       throw new Error('Invalid media URL: must be a valid HTTP URL');
     }
 
-    const { data, error } = await supabase
-      .from('stories')
-      .insert({
-        user_id: userId,
-        media_url: mediaUrl,
-        media_type: mediaType,
-        timer: timer || 3,
-        is_public: isPublic,
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
-      })
-      .select()
-      .single();
+    // Prepare story data
+    const storyData: any = {
+      user_id: userId,
+      media_url: mediaUrl,
+      media_type: mediaType,
+      timer: timer || 3,
+      is_public: isPublic,
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
+    };
+
+    // Add Vibe Check metadata if provided
+    if (vibeCheckMetadata) {
+      storyData.vibe_check_summary = vibeCheckMetadata.vibe_check_summary;
+      storyData.vibe_check_confidence = vibeCheckMetadata.vibe_check_confidence;
+      storyData.vibe_check_source_url = vibeCheckMetadata.vibe_check_source_url;
+
+      // Debug: Log Vibe Check metadata being saved
+      console.log('🔍 Saving Vibe Check metadata to story:', {
+        vibe_check_summary: vibeCheckMetadata.vibe_check_summary,
+        vibe_check_confidence: vibeCheckMetadata.vibe_check_confidence,
+        vibe_check_source_url: vibeCheckMetadata.vibe_check_source_url,
+      });
+    }
+
+    console.log('🔍 Inserting story data:', storyData);
+
+    const { data, error } = await supabase.from('stories').insert(storyData).select().single();
 
     if (error) {
       if (error.code === '23505') {
@@ -136,6 +166,21 @@ export async function getUserStories(
 
     if (error) {
       return [];
+    }
+
+    // Debug: Log raw data to see if Vibe Check metadata is present
+    console.log('🔍 Raw story data from database:', data);
+    if (data && data.length > 0) {
+      data.forEach((story: any, i: number) => {
+        if (story.vibe_check_summary) {
+          console.log(`🔍 Story ${i + 1} has Vibe Check data:`, {
+            id: story.id,
+            vibe_check_summary: story.vibe_check_summary,
+            vibe_check_confidence: story.vibe_check_confidence,
+            vibe_check_source_url: story.vibe_check_source_url,
+          });
+        }
+      });
     }
 
     // Transform the data to include computed fields

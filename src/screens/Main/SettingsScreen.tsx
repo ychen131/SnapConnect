@@ -12,7 +12,6 @@ import { uploadMediaToStorage } from '../../services/snapService';
 import { upsertUserProfile, getUserProfile } from '../../services/userService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { setUser, logout } from '../../store/authSlice';
-import { navigationRef } from '../../navigation/navigationRef';
 
 export default function SettingsScreen({ navigation }: { navigation: any }) {
   const user = useSelector((state: RootState) => state.auth.user);
@@ -79,13 +78,17 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
 
   // Placeholder for logout
   function handleLogout() {
-    dispatch(logout());
-    if (navigationRef.isReady()) {
-      navigationRef.reset({
-        index: 0,
-        routes: [{ name: 'Auth' }],
-      });
-    }
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: () => {
+          dispatch(logout());
+          // The RootNavigator will automatically handle navigation based on Redux state
+        },
+      },
+    ]);
   }
 
   return (

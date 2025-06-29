@@ -147,10 +147,7 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
         style: 'destructive',
         onPress: () => {
           dispatch(logout());
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Auth' }],
-          });
+          // The RootNavigator will automatically handle navigation based on Redux state
         },
       },
     ]);

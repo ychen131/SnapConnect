@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { getUserStories } from '../../services/storyService';
 import { clearStoryNotification } from '../../services/realtimeService';
+import VibeCheckSticker from '../../components/editor/VibeCheckSticker';
 
 type StoryViewerRouteParams = {
   id?: string;
@@ -37,6 +38,10 @@ interface Story {
   media_type: 'photo' | 'video';
   timer: number;
   created_at: string;
+  // Vibe Check metadata
+  vibe_check_summary?: string;
+  vibe_check_confidence?: number;
+  vibe_check_source_url?: string;
 }
 
 export default function StoryViewerScreen() {
@@ -77,6 +82,20 @@ export default function StoryViewerScreen() {
         const sortedStories = userStories
           .slice()
           .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+        // Debug: Log stories with Vibe Check data
+        const storiesWithVibeCheck = sortedStories.filter((s) => s.vibe_check_summary);
+        if (storiesWithVibeCheck.length > 0) {
+          console.log('🎯 Found stories with Vibe Check data:', storiesWithVibeCheck.length);
+          storiesWithVibeCheck.forEach((s, i) => {
+            console.log(`🎯 Story ${i + 1}:`, {
+              id: s.id,
+              summary: s.vibe_check_summary,
+              confidence: s.vibe_check_confidence,
+            });
+          });
+        }
+
         setCurrentUserStories(sortedStories);
         setCurrentStoryIndex(storyIndex ?? 0);
         // Clear story notifications for this user's stories
@@ -249,6 +268,17 @@ export default function StoryViewerScreen() {
     },
   });
 
+  // Debug logging for Vibe Check data
+  useEffect(() => {
+    if (currentUserStories[currentStoryIndex]?.vibe_check_summary) {
+      console.log('🎯 Story has Vibe Check data:', {
+        summary: currentUserStories[currentStoryIndex].vibe_check_summary,
+        confidence: currentUserStories[currentStoryIndex].vibe_check_confidence,
+        sourceUrl: currentUserStories[currentStoryIndex].vibe_check_source_url,
+      });
+    }
+  }, [currentStoryIndex, currentUserStories]);
+
   const story = currentUserStories[currentStoryIndex];
 
   return (
@@ -325,11 +355,46 @@ export default function StoryViewerScreen() {
               No stories to show
             </Text>
           ) : story.media_type === 'photo' ? (
-            <Image
-              source={{ uri: story.media_url }}
-              style={{ width: '90%', height: 400, borderRadius: 16 }}
-              resizeMode="cover"
-            />
+            <View style={{ position: 'relative', width: '90%', height: 400 }}>
+              <Image
+                source={{ uri: story.media_url }}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: 16,
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                }}
+                resizeMode="cover"
+              />
+              {/* Vibe Check Sticker - render if story has Vibe Check metadata */}
+              {story.vibe_check_summary && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    pointerEvents: 'box-none',
+                  }}
+                >
+                  <VibeCheckSticker
+                    summary={story.vibe_check_summary}
+                    onLearnWhy={() => {
+                      // TODO: Show Vibe Check report modal
+                      Alert.alert('Vibe Check Report', 'Detailed report feature coming soon!', [
+                        { text: 'OK' },
+                      ]);
+                    }}
+                    initialPosition={{ x: 50, y: 100 }}
+                    photoUri={story.media_url}
+                    isSuccess={true}
+                  />
+                </View>
+              )}
+            </View>
           ) : (
             <Text style={{ color: 'white', fontSize: 18, fontFamily: 'Nunito' }}>
               [Video playback coming soon]

@@ -35,6 +35,7 @@ import TextEditModal from '../../components/camera/TextEditModal';
 import {
   applyFilter,
   composeImageWithOverlays,
+  composeImageWithVibeCheckSticker,
   createTextOverlay,
   updateTextOverlay,
   exportEditedImage,
@@ -153,6 +154,9 @@ export default function CameraScreen() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [pendingVibeCheck, setPendingVibeCheck] = useState<any>(null); // Store the result to be saved
   const [publicImageUrl, setPublicImageUrl] = useState<string | null>(null);
+
+  // Add state for capturing composed image with overlays
+  const [isComposingImage, setIsComposingImage] = useState(false);
 
   const { height: windowHeight, width: windowWidth } = Dimensions.get('window');
   const insets = useSafeAreaInsets();
@@ -610,6 +614,48 @@ export default function CameraScreen() {
     }
   }
 
+  /**
+   * Captures the current photo with all overlays (filters, text, and Vibe Check sticker)
+   * and returns the composed image URI
+   */
+  async function captureComposedImage(): Promise<string> {
+    if (!photoUri) {
+      throw new Error('No photo available for composition');
+    }
+
+    setIsComposingImage(true);
+    try {
+      console.log('🎨 Capturing composed image with overlays...');
+
+      // If we have a filtered image, use that as the base
+      let baseImageUri = filteredImageUri || photoUri;
+
+      // If we have text overlays, compose them with the base image
+      if (textOverlays.length > 0) {
+        console.log(`📝 Composing ${textOverlays.length} text overlays...`);
+        baseImageUri = await composeImageWithOverlays(baseImageUri, currentFilter, textOverlays);
+      }
+
+      // If we have a Vibe Check sticker, we need to render it on the image
+      if (shortSummary && status === 'succeeded') {
+        console.log('✨ Adding Vibe Check sticker to composed image...');
+        baseImageUri = await composeImageWithVibeCheckSticker(baseImageUri, shortSummary, {
+          x: 100,
+          y: 200,
+        });
+      }
+
+      console.log('✅ Composed image captured successfully');
+      return baseImageUri;
+    } catch (error) {
+      console.error('❌ Failed to capture composed image:', error);
+      // Fallback to original photo
+      return photoUri;
+    } finally {
+      setIsComposingImage(false);
+    }
+  }
+
   // Handle add to story functionality
   async function handleAddToStory() {
     if (!user?.id) {
@@ -648,7 +694,9 @@ export default function CameraScreen() {
         await new Promise((resolve) => setTimeout(resolve, 500));
 
         if (photoUri) {
-          mediaUrl = await uploadMediaToStorage(photoUri, user.id);
+          // Capture the composed image with all overlays (filters, text, Vibe Check sticker)
+          const composedImageUri = await captureComposedImage();
+          mediaUrl = await uploadMediaToStorage(composedImageUri, user.id);
           mediaType = 'photo';
           timer = photoTimer;
         } else if (videoUri) {
@@ -661,7 +709,32 @@ export default function CameraScreen() {
         setUploadProgress(75);
         await new Promise((resolve) => setTimeout(resolve, 300));
 
-        const story = await addToStory(user.id, mediaUrl, mediaType, timer);
+        // Add Vibe Check metadata to the story if available
+        const storyMetadata =
+          shortSummary && status === 'succeeded' && confidence !== null
+            ? {
+                vibe_check_summary: shortSummary,
+                vibe_check_confidence: confidence,
+                vibe_check_source_url: sourceURL || '',
+              }
+            : undefined;
+
+        // Debug: Log Vibe Check metadata being passed
+        if (storyMetadata) {
+          console.log('🔍 Passing Vibe Check metadata to story:', storyMetadata);
+        } else {
+          console.log(
+            '🔍 No Vibe Check metadata to pass (shortSummary:',
+            shortSummary,
+            'status:',
+            status,
+            'confidence:',
+            confidence,
+            ')',
+          );
+        }
+
+        const story = await addToStory(user.id, mediaUrl, mediaType, timer, true, storyMetadata);
 
         setUploadProgress(100);
         await new Promise((resolve) => setTimeout(resolve, 200));

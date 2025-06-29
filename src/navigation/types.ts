@@ -115,5 +115,5 @@ export type AuthStackParamList = {
  */
 export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList>;
-  MainApp: NavigatorScreenParams<MainAppStackParamList>;
+  Main: NavigatorScreenParams<MainTabParamList>;
 };

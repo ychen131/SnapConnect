@@ -18,7 +18,17 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import Avatar from '../../components/ui/Avatar';
 import { StackActions } from '@react-navigation/native';
 
-function StoryAvatar({ id, username, avatarUrl, isOwn, hasStory, isNew, onPress, ...props }: any) {
+function StoryAvatar({
+  id,
+  username,
+  avatarUrl,
+  isOwn,
+  hasStory,
+  isNew,
+  hasVibeCheck,
+  onPress,
+  ...props
+}: any) {
   if (!username) {
     console.warn('StoryAvatar missing username:', {
       username,
@@ -26,6 +36,7 @@ function StoryAvatar({ id, username, avatarUrl, isOwn, hasStory, isNew, onPress,
       isOwn,
       hasStory,
       isNew,
+      hasVibeCheck,
       ...props,
     });
   }
@@ -41,15 +52,23 @@ function StoryAvatar({ id, username, avatarUrl, isOwn, hasStory, isNew, onPress,
 
   return (
     <TouchableOpacity className="mx-2 items-center" onPress={onPress}>
-      <Avatar
-        avatarUrl={avatarUrl}
-        username={displayName}
-        size={64}
-        borderColor={borderColor}
-        borderWidth={4}
-        backgroundColor={hasStory ? '#FF8C69' : '#E5E7EB'}
-        textColor={hasStory ? '#FFFFFF' : '#6B7280'}
-      />
+      <View className="relative">
+        <Avatar
+          avatarUrl={avatarUrl}
+          username={displayName}
+          size={64}
+          borderColor={borderColor}
+          borderWidth={4}
+          backgroundColor={hasStory ? '#FF8C69' : '#E5E7EB'}
+          textColor={hasStory ? '#FFFFFF' : '#6B7280'}
+        />
+        {/* Vibe Check indicator */}
+        {hasVibeCheck && (
+          <View className="absolute -right-1 -top-1 rounded-full bg-yellow-400 p-1">
+            <Text className="text-xs">✨</Text>
+          </View>
+        )}
+      </View>
       <Text className="mt-2 w-16 text-center font-heading text-xs" numberOfLines={1}>
         {isOwn ? (hasStory ? 'Your Story' : 'Add Story') : displayName}
       </Text>
@@ -76,8 +95,11 @@ export default function StoriesScreen() {
         getFriendsWithActiveStories(user.id),
         getUserStories(user.id, false), // Only active stories
       ]);
-      // Map to UI format
+
+      // Check if user's stories have Vibe Check metadata
       const hasMyStory = Array.isArray(myStories) && myStories.length > 0;
+      const hasVibeCheck = hasMyStory && myStories.some((story: any) => story.vibe_check_summary);
+
       const storyList = [
         {
           id: 'me',
@@ -85,6 +107,7 @@ export default function StoriesScreen() {
           avatarUrl: user.avatar_url || '', // Use user's own avatar
           isOwn: true,
           hasStory: hasMyStory,
+          hasVibeCheck: hasVibeCheck,
         },
         ...friends.map((f: any) => {
           return {
@@ -94,6 +117,7 @@ export default function StoriesScreen() {
             isOwn: false,
             hasStory: true,
             isNew: true,
+            hasVibeCheck: false, // TODO: Check friends' stories for Vibe Check metadata
           };
         }),
       ];

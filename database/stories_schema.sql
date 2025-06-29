@@ -12,7 +12,11 @@ CREATE TABLE IF NOT EXISTS public.stories (
     view_count INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '24 hours'),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    -- Vibe Check metadata
+    vibe_check_summary TEXT,
+    vibe_check_confidence DECIMAL(3,2) CHECK (vibe_check_confidence >= 0 AND vibe_check_confidence <= 1),
+    vibe_check_source_url TEXT
 );
 
 -- Create indexes for better performance
@@ -20,6 +24,7 @@ CREATE INDEX IF NOT EXISTS idx_stories_user_id ON public.stories(user_id);
 CREATE INDEX IF NOT EXISTS idx_stories_created_at ON public.stories(created_at);
 CREATE INDEX IF NOT EXISTS idx_stories_expires_at ON public.stories(expires_at);
 CREATE INDEX IF NOT EXISTS idx_stories_is_public ON public.stories(is_public);
+CREATE INDEX IF NOT EXISTS idx_stories_media_type ON public.stories(media_type);
 
 -- Enable Row Level Security
 ALTER TABLE public.stories ENABLE ROW LEVEL SECURITY;
