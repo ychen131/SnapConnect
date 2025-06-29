@@ -40,6 +40,7 @@ import { useImagePreloader } from '../../hooks/useImagePreloader';
 import CachedImage from '../../components/ui/CachedImage';
 import tailwindConfig from '../../../tailwind.config';
 import { getUserProfile } from '../../services/userService';
+import { getOrCreateConversation } from '../../services/chatService';
 
 // Safely access tailwind config with fallbacks
 const brandColor = (tailwindConfig?.theme?.extend?.colors as any)?.brand?.DEFAULT || '#FFD700';
@@ -287,6 +288,26 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
     navigation.navigate('Camera');
   }
 
+  /**
+   * Navigates to chat with the friend
+   */
+  async function handleSendMessage() {
+    if (!profileUser?.id || !loggedInUser?.id) return;
+    try {
+      const conversationId = await getOrCreateConversation(loggedInUser.id, profileUser.id);
+      navigation.navigate('Chat', {
+        screen: 'IndividualChat',
+        params: {
+          conversationId,
+          otherUserId: profileUser.id,
+          otherUsername: profileUser.username,
+        },
+      });
+    } catch (err) {
+      console.error('Failed to start chat:', err);
+    }
+  }
+
   // Helper to display username in title case
   function toTitleCase(str: string) {
     return str.replace(/\b\w/g, (char) => char.toUpperCase());
@@ -458,7 +479,8 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
         </View>
 
         {/* Action Buttons Section */}
-        {profileUser.id === (profileUser as any).id ? (
+        {isSelf ? (
+          // Own profile: Add Vibe Check, Edit Profile, Add Friend Icon
           <View className="flex-row items-center justify-center gap-2 px-4 pb-4">
             {/* Add Vibe Check CTA (fills half row) */}
             <TouchableOpacity
@@ -489,7 +511,7 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
             </TouchableOpacity>
           </View>
         ) : (
-          // Friend or potential friend profile: Add Friend and Send Snap, bold CTAs
+          // Friend profile: Add Friend and Send Message
           <View className="flex-row justify-center gap-4 px-4 pb-4">
             <Button
               label="Add Friend"
@@ -498,9 +520,9 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
               className="flex-1 rounded-xl py-2 text-sm shadow-lg"
             />
             <Button
-              label="Send Snap"
+              label="Send Message"
               variant="secondary"
-              onPress={() => {}}
+              onPress={handleSendMessage}
               className="text-brand-red flex-1 rounded-xl bg-brand-light py-2 text-sm"
             />
           </View>
