@@ -24,6 +24,7 @@ import {
 import { clearAllMessageNotifications as clearAllMessageNotificationsSlice } from '../../store/realtimeSlice';
 import DebugInfo from '../../components/DebugInfo';
 import Avatar from '../../components/ui/Avatar';
+import tailwindConfig from '../../../tailwind.config';
 
 /**
  * Displays a list of chat conversations for the current user
@@ -35,6 +36,13 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
   const user = useSelector((state: RootState) => state.auth.user);
   const realtimeState = useSelector((state: RootState) => state.realtime);
   const dispatch = useDispatch();
+
+  // Safely access tailwind config with fallbacks
+  const brandLight = (tailwindConfig?.theme?.extend?.colors as any)?.brand?.light || '#FFF0E6';
+  const textPrimary = (tailwindConfig?.theme?.extend?.colors as any)?.['text-primary'] || '#2D2D2D';
+  const muted = (tailwindConfig?.theme?.extend?.colors as any)?.muted || '#AAB0B7';
+  const errorColor = (tailwindConfig?.theme?.extend?.colors as any)?.error || '#ef4444';
+  const background = (tailwindConfig?.theme?.extend?.colors as any)?.background || '#FFFFFF';
 
   /**
    * Fetches conversations from the database
@@ -98,7 +106,11 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
     return (
       <TouchableOpacity
         onPress={() => handleConversationPress(item)}
-        className="flex-row items-center border-b border-gray-200 bg-white p-4"
+        className="flex-row items-center border-b border-gray-200"
+        style={{
+          backgroundColor: `rgba(${parseInt(background.slice(1, 3), 16)},${parseInt(background.slice(3, 5), 16)},${parseInt(background.slice(5, 7), 16)},0.9)`,
+          padding: 16,
+        }}
       >
         {/* Avatar */}
         <View className="relative mr-3">
@@ -112,8 +124,13 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
 
           {/* Unread Badge - combine database count with realtime notifications */}
           {showBadge && (
-            <View className="absolute -right-1 -top-1 h-5 min-w-[20px] items-center justify-center rounded-full bg-error">
-              <Text className="font-heading text-xs font-semibold text-white">
+            <View
+              className="absolute -right-1 -top-1 h-5 min-w-[20px] items-center justify-center rounded-full"
+              style={{ backgroundColor: errorColor }}
+            >
+              <Text
+                style={{ fontFamily: 'Nunito', fontSize: 12, fontWeight: '600', color: '#fff' }}
+              >
                 {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
               </Text>
             </View>
@@ -123,16 +140,18 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
         {/* Conversation Info */}
         <View className="flex-1">
           <View className="flex-row items-center justify-between">
-            <Text className="text-text-primary font-heading text-base font-semibold">
+            <Text
+              style={{ fontFamily: 'Nunito', fontSize: 16, fontWeight: '700', color: textPrimary }}
+            >
               {item.other_user_username}
             </Text>
-            <Text className="font-heading text-sm text-muted">
+            <Text style={{ fontFamily: 'Nunito', fontSize: 14, color: muted }}>
               {new Date(item.last_message_at).toLocaleDateString()}
             </Text>
           </View>
 
           <View className="mt-1 flex-row items-center justify-between">
-            <Text className="flex-1 font-heading text-sm text-muted" numberOfLines={1}>
+            <Text style={{ fontFamily: 'Nunito', fontSize: 14, color: muted }} numberOfLines={1}>
               {getLastMessagePreview()}
             </Text>
           </View>
@@ -200,22 +219,22 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#3B82F6" />
-        <Text className="mt-4 text-gray-500">Loading conversations...</Text>
-      </View>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: brandLight }}>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text className="mt-4 text-gray-500">Loading conversations...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: brandLight }}>
       {/* Header */}
-      <SafeAreaView edges={['top']} className="bg-white">
-        <View className="border-b border-gray-200 px-4 py-3">
-          <Text className="text-xl font-bold text-gray-900">Chats</Text>
-        </View>
-        {renderConnectionStatus()}
-      </SafeAreaView>
+      <View className="px-4 pb-2 pt-4" style={{ backgroundColor: brandLight }}>
+        <Text className="text-text-primary font-heading text-2xl font-extrabold">Chats</Text>
+      </View>
+      {renderConnectionStatus()}
 
       {/* Conversations List */}
       <FlatList
@@ -235,6 +254,6 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
 
       {/* Debug Info Component */}
       <DebugInfo />
-    </View>
+    </SafeAreaView>
   );
 }
