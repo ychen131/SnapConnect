@@ -6,6 +6,7 @@
 import { supabase } from './supabase';
 import { optimizeImageForAPI, needsCompression, getImageInfo } from '../utils/imageCompression';
 import * as FileSystem from 'expo-file-system';
+import { vibeCheckCacheService } from './vibeCheckCacheService';
 
 // Request and response types
 export interface VibeCheckRequest {
@@ -74,26 +75,6 @@ export interface VibeCheckRecord {
 // --- Cloud CRUD Functions ---
 
 /**
- * Saves a new vibe check to Supabase (cloud).
- * @param vibeCheck Vibe check record (without id)
- * @returns The saved vibe check record (with id)
- */
-export async function saveVibeCheckToCloud(
-  vibeCheck: Omit<VibeCheckRecord, 'id'>,
-): Promise<VibeCheckRecord> {
-  if (!vibeCheck.session_id) {
-    vibeCheck.session_id = generateUUID();
-  }
-  const { data, error } = await supabase
-    .from('vibe_check_feedback')
-    .insert([vibeCheck])
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
-}
-
-/**
  * Fetches all vibe checks for the current user from Supabase.
  * @param userId The user's id
  * @returns Array of vibe check records
@@ -152,7 +133,82 @@ export async function fetchVibeChecksFromCloud(userId: string): Promise<VibeChec
 }
 
 /**
- * Deletes a vibe check from Supabase by id.
+ * Fetches vibe checks with caching support - returns cached data immediately if available
+ * @param userId The user's id
+ * @param useCache Whether to use cache (default: true)
+ * @returns Array of vibe check records
+ */
+export async function fetchVibeChecksWithCache(
+  userId: string,
+  useCache: boolean = true,
+): Promise<VibeCheckRecord[]> {
+  console.log('🔍 fetchVibeChecksWithCache called with userId:', userId, 'useCache:', useCache);
+
+  if (useCache) {
+    // Try to get cached data first
+    const cachedVibeChecks = await vibeCheckCacheService.getCachedVibeChecks(userId);
+    if (cachedVibeChecks) {
+      console.log(`📊 Returning cached vibe checks for user: ${userId}`);
+      return cachedVibeChecks;
+    }
+  }
+
+  // Fetch fresh data from cloud
+  const freshVibeChecks = await fetchVibeChecksFromCloud(userId);
+
+  // Cache the fresh data
+  await vibeCheckCacheService.cacheVibeChecks(userId, freshVibeChecks);
+
+  return freshVibeChecks;
+}
+
+/**
+ * Fetches vibe checks in background (for refresh) - doesn't return cached data
+ * @param userId The user's id
+ * @returns Array of vibe check records
+ */
+export async function fetchVibeChecksInBackground(userId: string): Promise<VibeCheckRecord[]> {
+  console.log('🔄 fetchVibeChecksInBackground called with userId:', userId);
+
+  try {
+    const freshVibeChecks = await fetchVibeChecksFromCloud(userId);
+
+    // Cache the fresh data
+    await vibeCheckCacheService.cacheVibeChecks(userId, freshVibeChecks);
+
+    return freshVibeChecks;
+  } catch (error) {
+    console.error('❌ Background fetch failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Saves a new vibe check to Supabase (cloud) and invalidates cache.
+ * @param vibeCheck Vibe check record (without id)
+ * @returns The saved vibe check record (with id)
+ */
+export async function saveVibeCheckToCloud(
+  vibeCheck: Omit<VibeCheckRecord, 'id'>,
+): Promise<VibeCheckRecord> {
+  if (!vibeCheck.session_id) {
+    vibeCheck.session_id = generateUUID();
+  }
+  const { data, error } = await supabase
+    .from('vibe_check_feedback')
+    .insert([vibeCheck])
+    .select()
+    .single();
+  if (error) throw error;
+
+  // Invalidate cache for this user since we added a new vibe check
+  await vibeCheckCacheService.invalidateCache(vibeCheck.user_id);
+
+  return data;
+}
+
+/**
+ * Deletes a vibe check from Supabase by id and invalidates cache.
  * @param id The vibe check id
  * @param userId The user's id (for RLS)
  * @returns void
@@ -164,6 +220,9 @@ export async function deleteVibeCheckFromCloud(id: string, userId: string): Prom
     .eq('id', id)
     .eq('user_id', userId);
   if (error) throw error;
+
+  // Invalidate cache for this user since we deleted a vibe check
+  await vibeCheckCacheService.invalidateCache(userId);
 }
 
 /**

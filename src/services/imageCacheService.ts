@@ -36,17 +36,35 @@ class ImageCacheService {
   private config: CacheConfig;
   private cacheIndex: Map<string, CacheEntry> = new Map();
   private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor(config: Partial<CacheConfig> = {}) {
     this.config = { ...DEFAULT_CACHE_CONFIG, ...config };
   }
 
   /**
-   * Initialize the cache service
+   * Initialize the cache service (only once)
    */
   async initialize(): Promise<void> {
-    if (this.isInitialized) return;
+    // If already initialized, return immediately
+    if (this.isInitialized) {
+      return;
+    }
 
+    // If initialization is in progress, wait for it to complete
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    // Start initialization
+    this.initializationPromise = this.performInitialization();
+    return this.initializationPromise;
+  }
+
+  /**
+   * Perform the actual initialization
+   */
+  private async performInitialization(): Promise<void> {
     try {
       // Create cache directory if it doesn't exist
       const dirInfo = await FileSystem.getInfoAsync(this.config.cacheDirectory);
@@ -64,6 +82,10 @@ class ImageCacheService {
       console.log('📸 Image cache service initialized');
     } catch (error) {
       console.error('Failed to initialize image cache:', error);
+      throw error;
+    } finally {
+      // Clear the promise so future calls can retry if needed
+      this.initializationPromise = null;
     }
   }
 
@@ -81,6 +103,23 @@ class ImageCacheService {
       return cachedPath;
     }
 
+    // Check if this is an Expo cache file - return as-is
+    if (this.isExpoCacheFile(url)) {
+      console.log(`📱 Using Expo cached file: ${url}`);
+      return url;
+    }
+
+    // Check if this is a local file URL
+    if (this.isLocalFile(url)) {
+      // Check if the local file exists
+      const fileInfo = await FileSystem.getInfoAsync(url);
+      if (!fileInfo.exists) {
+        console.warn(`⚠️ Local file not found, returning original URL: ${url}`);
+        return url; // Return original URL if file doesn't exist
+      }
+      return await this.copyLocalFile(url);
+    }
+
     // Download and cache the image
     return await this.downloadAndCacheImage(url);
   }
@@ -90,6 +129,24 @@ class ImageCacheService {
    */
   async isImageCached(url: string): Promise<boolean> {
     await this.initialize();
+
+    // Expo cache files are considered cached
+    if (this.isExpoCacheFile(url)) {
+      return true;
+    }
+
+    // For local files, check if they exist and are readable
+    if (this.isLocalFile(url)) {
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(url);
+        return fileInfo.exists;
+      } catch (error) {
+        console.warn(`⚠️ Error checking local file: ${url}`, error);
+        return false;
+      }
+    }
+
+    // For remote URLs, check cache index
     const entry = this.cacheIndex.get(this.getCacheKey(url));
     if (!entry) return false;
 
@@ -103,6 +160,24 @@ class ImageCacheService {
    */
   async getCachedImagePath(url: string): Promise<string | null> {
     await this.initialize();
+
+    // Expo cache files are considered cached
+    if (this.isExpoCacheFile(url)) {
+      return url;
+    }
+
+    // For local files, return the original path if it exists
+    if (this.isLocalFile(url)) {
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(url);
+        return fileInfo.exists ? url : null;
+      } catch (error) {
+        console.warn(`⚠️ Error checking local file path: ${url}`, error);
+        return null;
+      }
+    }
+
+    // For remote URLs, check cache index
     const entry = this.cacheIndex.get(this.getCacheKey(url));
     if (!entry) return null;
 
@@ -171,14 +246,37 @@ class ImageCacheService {
   async preloadImages(urls: string[]): Promise<void> {
     await this.initialize();
 
-    const uncachedUrls = urls.filter((url) => !this.cacheIndex.has(this.getCacheKey(url)));
+    // Separate different types of URLs
+    const expoCacheFiles = urls.filter((url) => this.isExpoCacheFile(url));
+    const localFiles = urls.filter((url) => this.isLocalFile(url) && !this.isExpoCacheFile(url));
+    const remoteUrls = urls.filter((url) => !this.isLocalFile(url));
+
+    // Log Expo cache files (already cached)
+    if (expoCacheFiles.length > 0) {
+      console.log(`📱 Skipping ${expoCacheFiles.length} Expo cached files`);
+    }
+
+    // Handle local files first (just verify they exist)
+    for (const localFile of localFiles) {
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(localFile);
+        if (!fileInfo.exists) {
+          console.warn(`⚠️ Local file not found during preload: ${localFile}`);
+        }
+      } catch (error) {
+        console.warn(`⚠️ Error checking local file during preload: ${localFile}`, error);
+      }
+    }
+
+    // Handle remote URLs that aren't already cached
+    const uncachedUrls = remoteUrls.filter((url) => !this.cacheIndex.has(this.getCacheKey(url)));
 
     if (uncachedUrls.length === 0) {
-      console.log('📸 All images already cached');
+      console.log('📸 All remote images already cached');
       return;
     }
 
-    console.log(`📥 Preloading ${uncachedUrls.length} images...`);
+    console.log(`📥 Preloading ${uncachedUrls.length} remote images...`);
 
     // Download images in parallel (limit to 3 concurrent downloads)
     const batchSize = 3;
@@ -340,6 +438,72 @@ class ImageCacheService {
       await AsyncStorage.setItem('image-cache-index', JSON.stringify(indexData));
     } catch (error) {
       console.warn('Failed to save cache index:', error);
+    }
+  }
+
+  /**
+   * Check if a URL is a local file
+   */
+  private isLocalFile(url: string): boolean {
+    return url.startsWith('file://') || url.startsWith('/');
+  }
+
+  /**
+   * Check if a URL is in Expo's cache directory
+   */
+  private isExpoCacheFile(url: string): boolean {
+    return url.includes('ExponentExperienceData') || url.includes('Library/Caches');
+  }
+
+  /**
+   * Copy a local file to the cache directory
+   */
+  private async copyLocalFile(localPath: string): Promise<string> {
+    try {
+      const cacheKey = this.getCacheKey(localPath);
+      const fileName = `${cacheKey}.jpg`;
+      const cachedPath = `${this.config.cacheDirectory}${fileName}`;
+
+      console.log(`📋 Copying local file: ${localPath}`);
+
+      // Check if source file exists
+      const sourceInfo = await FileSystem.getInfoAsync(localPath);
+      if (!sourceInfo.exists) {
+        throw new Error(`Source file does not exist: ${localPath}`);
+      }
+
+      // Copy the file
+      await FileSystem.copyAsync({
+        from: localPath,
+        to: cachedPath,
+      });
+
+      // Get file info
+      const fileInfo = await FileSystem.getInfoAsync(cachedPath);
+      const size = (fileInfo as any).size || 0;
+
+      // Create cache entry
+      const entry: CacheEntry = {
+        url: localPath,
+        localPath: cachedPath,
+        size,
+        lastAccessed: Date.now(),
+        createdAt: Date.now(),
+        contentType: 'image/jpeg',
+      };
+
+      // Add to cache index
+      this.cacheIndex.set(cacheKey, entry);
+      await this.saveCacheIndex();
+
+      // Check if we need to cleanup cache
+      await this.cleanupCacheIfNeeded();
+
+      console.log(`✅ Local file cached: ${localPath} (${(size / 1024).toFixed(1)}KB)`);
+      return cachedPath;
+    } catch (error) {
+      console.error(`❌ Failed to cache local file ${localPath}:`, error);
+      throw error;
     }
   }
 }

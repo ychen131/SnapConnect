@@ -33,6 +33,8 @@ import {
   deleteVibeCheckFromCloud,
   migrateLocalVibeChecksToCloud,
   VibeCheckRecord,
+  fetchVibeChecksWithCache,
+  fetchVibeChecksInBackground,
 } from '../../services/vibeCheckService';
 import { useImagePreloader } from '../../hooks/useImagePreloader';
 import CachedImage from '../../components/ui/CachedImage';
@@ -69,6 +71,8 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
   const [cloudVibeChecks, setCloudVibeChecks] = useState<VibeCheckRecord[]>([]);
   const [isMigrating, setIsMigrating] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isLoadingFromCache, setIsLoadingFromCache] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { preloadForScreen } = useImagePreloader();
 
   useEffect(() => {
@@ -128,34 +132,91 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
   );
 
   /**
-   * Fetches all vibe checks from Supabase for the user.
+   * Fetches all vibe checks from Supabase for the user with caching support.
    */
   async function refreshCloudVibes() {
     if (!profileUser?.id) return;
-    setIsLoading(true);
+
+    let didCancel = false;
+
     try {
       console.log('Fetching vibe checks for user:', profileUser.id);
       console.log('Current logged in user:', loggedInUser?.id);
       console.log('Is viewing own profile:', isSelf);
 
-      // Fetch vibe checks for any user (own or friend) - RLS policy will handle permissions
-      const vibes = await fetchVibeChecksFromCloud(profileUser.id);
-      console.log('Fetched vibes:', vibes);
-      setCloudVibeChecks(vibes);
+      // First, try to load from cache for instant display
+      setIsLoadingFromCache(true);
+      const cachedVibeChecks = await fetchVibeChecksWithCache(profileUser.id, true);
 
-      // Preload vibe check images for better performance
-      const imageUrls = vibes
-        .map((vibe) => vibe.source_url)
-        .filter((url): url is string => url !== null && url !== undefined && url.trim() !== '');
+      if (didCancel) return;
 
-      if (imageUrls.length > 0) {
-        preloadForScreen('ProfileScreen', imageUrls);
+      if (cachedVibeChecks.length > 0) {
+        console.log('📊 Displaying cached vibe checks:', cachedVibeChecks.length);
+        setCloudVibeChecks(cachedVibeChecks);
+        setIsLoadingFromCache(false);
+
+        // Preload vibe check images for better performance
+        const imageUrls = cachedVibeChecks
+          .map((vibe) => vibe.source_url)
+          .filter((url): url is string => url !== null && url !== undefined && url.trim() !== '');
+
+        if (imageUrls.length > 0) {
+          preloadForScreen('ProfileScreen', imageUrls);
+        }
+      } else {
+        setIsLoadingFromCache(false);
+      }
+
+      // Then fetch fresh data in background - but don't clear existing data
+      setIsRefreshing(true);
+      const freshVibeChecks = await fetchVibeChecksInBackground(profileUser.id);
+
+      if (didCancel) return;
+
+      // Only update if we got fresh data and it's different from current
+      if (freshVibeChecks.length > 0) {
+        const currentIds = new Set(cloudVibeChecks.map((v) => v.id));
+        const freshIds = new Set(freshVibeChecks.map((v) => v.id));
+
+        // Check if the data has actually changed
+        const hasChanged =
+          freshVibeChecks.length !== cloudVibeChecks.length ||
+          freshVibeChecks.some((v) => !currentIds.has(v.id)) ||
+          cloudVibeChecks.some((v) => !freshIds.has(v.id));
+
+        if (hasChanged) {
+          console.log('🔄 Updated with fresh vibe checks:', freshVibeChecks.length);
+          setCloudVibeChecks(freshVibeChecks);
+
+          // Preload fresh vibe check images
+          const imageUrls = freshVibeChecks
+            .map((vibe) => vibe.source_url)
+            .filter((url): url is string => url !== null && url !== undefined && url.trim() !== '');
+
+          if (imageUrls.length > 0) {
+            preloadForScreen('ProfileScreen', imageUrls);
+          }
+        } else {
+          console.log('🔄 Fresh data is the same as cached data, no update needed');
+        }
+      } else if (freshVibeChecks.length === 0 && cloudVibeChecks.length > 0) {
+        // If fresh data is empty but we have cached data, keep the cached data
+        console.log('🔄 Fresh data is empty, keeping cached vibe checks');
+      } else {
+        // Update with empty array only if we don't have any cached data
+        setCloudVibeChecks(freshVibeChecks);
       }
     } catch (err) {
       console.error('Error fetching vibe checks:', err);
-      setCloudVibeChecks([]);
+      // Don't clear existing vibe checks on error - keep what we have
+      if (!didCancel && cloudVibeChecks.length === 0) {
+        setCloudVibeChecks([]);
+      }
     } finally {
-      setIsLoading(false);
+      if (!didCancel) {
+        setIsLoadingFromCache(false);
+        setIsRefreshing(false);
+      }
     }
   }
 
@@ -493,7 +554,7 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
   // Render content based on selected tab
   const renderContent = () => {
     if (selectedTab === 'vibes') {
-      if (isLoading || isMigrating) {
+      if (isLoadingFromCache && cloudVibeChecks.length === 0) {
         return (
           <View className="flex-1 items-center justify-center py-8">
             <ActivityIndicator size="large" color="#FFD700" />
@@ -501,6 +562,29 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
           </View>
         );
       }
+
+      if (isRefreshing && cloudVibeChecks.length > 0) {
+        return (
+          <View className="px-1 pb-4 pt-1">
+            <View className="mb-2 flex-row items-center justify-center">
+              <ActivityIndicator size="small" color="#FFD700" />
+              <Text className="ml-2 text-sm text-gray-500">Refreshing...</Text>
+            </View>
+            <VibeCheckHistoryGrid
+              items={cloudVibeChecks.map((v) => ({
+                id: v.id!,
+                photoUri: v.source_url || '',
+                summary: v.short_summary,
+                detailedReport: v.detailed_report,
+                timestamp: v.request_timestamp,
+              }))}
+              onItemPress={handleVibeCheckHistoryItemPress}
+              getRelativeTime={getRelativeTime}
+            />
+          </View>
+        );
+      }
+
       return (
         <View className="px-1 pb-4 pt-1">
           <VibeCheckHistoryGrid

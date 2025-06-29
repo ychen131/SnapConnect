@@ -102,7 +102,7 @@ export default function CachedImage({
 
   // Show fallback or error state
   if (hasError || !cachedUri) {
-    return <Image source={fallbackSource} style={style} {...imageProps} />;
+    return <Image style={{ backgroundColor: 'red' }} {...imageProps} />;
   }
 
   // Show cached image

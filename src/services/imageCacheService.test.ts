@@ -3,6 +3,7 @@
  * @description Tests for the image caching service
  */
 import { imageCacheService } from './imageCacheService';
+import * as FileSystem from 'expo-file-system';
 
 describe('ImageCacheService', () => {
   beforeEach(async () => {
@@ -92,5 +93,64 @@ describe('ImageCacheService', () => {
     stats = await imageCacheService.getCacheStats();
     expect(stats.totalEntries).toBe(0);
     expect(stats.totalSizeMB).toBe(0);
+  });
+
+  it('should handle local files correctly', async () => {
+    await imageCacheService.initialize();
+
+    // Test local file detection
+    const localFile = 'file:///var/mobile/test/image.jpg';
+    const remoteUrl = 'https://example.com/image.jpg';
+
+    // Mock FileSystem.getInfoAsync for local file
+    const mockFileInfo = { exists: true, size: 1024 };
+    jest.spyOn(FileSystem, 'getInfoAsync').mockResolvedValue(mockFileInfo as any);
+
+    // Mock FileSystem.copyAsync for local file copying
+    jest.spyOn(FileSystem, 'copyAsync').mockResolvedValue();
+
+    // Test local file handling
+    const result = await imageCacheService.getCachedImage(localFile);
+    expect(result).toBeDefined();
+
+    // Verify copy was called instead of download
+    expect(FileSystem.copyAsync).toHaveBeenCalled();
+
+    // Test remote URL handling (should not call copy)
+    jest.clearAllMocks();
+    jest.spyOn(FileSystem, 'downloadAsync').mockResolvedValue({ status: 200 } as any);
+
+    await imageCacheService.getCachedImage(remoteUrl);
+    expect(FileSystem.downloadAsync).toHaveBeenCalled();
+    expect(FileSystem.copyAsync).not.toHaveBeenCalled();
+  });
+
+  it('should handle Expo cache files correctly', async () => {
+    await imageCacheService.initialize();
+
+    // Test Expo cache file detection
+    const expoCacheFile =
+      'file:///var/mobile/Containers/Data/Application/221AF46E-350D-4A80-99B9-3828205738B4/Library/Caches/ExponentExperienceData/@anonymous/snapdog/Camera/image.jpg';
+    const regularLocalFile = 'file:///var/mobile/other/image.jpg';
+    const remoteUrl = 'https://example.com/image.jpg';
+
+    // Test that Expo cache files are treated as already cached
+    const expoResult = await imageCacheService.getCachedImage(expoCacheFile);
+    expect(expoResult).toBe(expoCacheFile); // Should return original path
+
+    // Test that regular local files still get processed
+    const mockFileInfo = { exists: true, size: 1024 };
+    jest.spyOn(FileSystem, 'getInfoAsync').mockResolvedValue(mockFileInfo as any);
+    jest.spyOn(FileSystem, 'copyAsync').mockResolvedValue();
+
+    await imageCacheService.getCachedImage(regularLocalFile);
+    expect(FileSystem.copyAsync).toHaveBeenCalled();
+
+    // Test that remote URLs still get downloaded
+    jest.clearAllMocks();
+    jest.spyOn(FileSystem, 'downloadAsync').mockResolvedValue({ status: 200 } as any);
+
+    await imageCacheService.getCachedImage(remoteUrl);
+    expect(FileSystem.downloadAsync).toHaveBeenCalled();
   });
 });

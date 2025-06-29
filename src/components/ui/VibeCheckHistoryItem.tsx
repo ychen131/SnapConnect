@@ -25,7 +25,7 @@ interface VibeCheckHistoryItemProps {
 /**
  * Individual Vibe Check history item for the grid
  */
-export default function VibeCheckHistoryItem({
+const VibeCheckHistoryItem = React.memo(function VibeCheckHistoryItem({
   photoUri,
   summary,
   timestamp,
@@ -60,7 +60,9 @@ export default function VibeCheckHistoryItem({
       </Text>
     </TouchableOpacity>
   );
-}
+});
+
+export default VibeCheckHistoryItem;
 
 const styles = StyleSheet.create({
   container: {

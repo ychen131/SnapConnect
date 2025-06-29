@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { setUser, logout } from '../../store/authSlice';
 import { useImagePreloader } from '../../hooks/useImagePreloader';
 import CachedImage from '../../components/ui/CachedImage';
+import { vibeCheckCacheService } from '../../services/vibeCheckCacheService';
 
 export default function SettingsScreen({ navigation }: { navigation: any }) {
   const user = useSelector((state: RootState) => state.auth.user);
@@ -24,6 +25,13 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     totalSizeMB: number;
     oldestEntry: number;
     newestEntry: number;
+  } | null>(null);
+  const [vibeCheckCacheStats, setVibeCheckCacheStats] = useState<{
+    totalEntries: number;
+    totalSizeMB: number;
+    oldestEntry: number;
+    newestEntry: number;
+    cacheHitRate: number;
   } | null>(null);
 
   if (!user) {
@@ -48,8 +56,12 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
 
   async function loadCacheStats() {
     try {
-      const stats = await getCacheStats();
-      setCacheStats(stats);
+      const [imageStats, vibeStats] = await Promise.all([
+        getCacheStats(),
+        vibeCheckCacheService.getCacheStats(),
+      ]);
+      setCacheStats(imageStats);
+      setVibeCheckCacheStats(vibeStats);
     } catch (error) {
       console.error('Failed to load cache stats:', error);
     }
@@ -117,6 +129,54 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
               Alert.alert('Success', 'Image cache cleared successfully.');
             } catch (error) {
               Alert.alert('Error', 'Failed to clear image cache.');
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  // Clear vibe check cache
+  async function handleClearVibeCheckCache() {
+    Alert.alert(
+      'Clear Vibe Check Cache',
+      'This will remove all cached vibe check data from your device. Data will be re-fetched when needed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear Cache',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await vibeCheckCacheService.clearCache();
+              await loadCacheStats();
+              Alert.alert('Success', 'Vibe check cache cleared successfully.');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to clear vibe check cache.');
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  // Clear all caches
+  async function handleClearAllCaches() {
+    Alert.alert(
+      'Clear All Caches',
+      'This will remove all cached images and vibe check data from your device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await Promise.all([clearCache(), vibeCheckCacheService.clearCache()]);
+              await loadCacheStats();
+              Alert.alert('Success', 'All caches cleared successfully.');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to clear caches.');
             }
           },
         },
@@ -240,6 +300,66 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
             className="mt-2"
           />
         </View>
+      </View>
+
+      {/* Vibe Check Cache Management Section */}
+      <View className="mb-6 px-6">
+        <Text className="text-text-primary mb-4 font-heading text-lg font-bold">
+          Vibe Check Cache
+        </Text>
+        <View className="rounded-lg border border-gray-200 bg-white p-4">
+          {vibeCheckCacheStats ? (
+            <View>
+              <View className="mb-3 flex-row justify-between">
+                <Text className="text-text-secondary font-heading text-sm">Cached Users:</Text>
+                <Text className="font-heading text-sm font-semibold">
+                  {vibeCheckCacheStats.totalEntries}
+                </Text>
+              </View>
+              <View className="mb-3 flex-row justify-between">
+                <Text className="text-text-secondary font-heading text-sm">Cache Size:</Text>
+                <Text className="font-heading text-sm font-semibold">
+                  {vibeCheckCacheStats.totalSizeMB.toFixed(1)} MB
+                </Text>
+              </View>
+              <View className="mb-3 flex-row justify-between">
+                <Text className="text-text-secondary font-heading text-sm">Cache Hit Rate:</Text>
+                <Text className="font-heading text-sm font-semibold">
+                  {vibeCheckCacheStats.cacheHitRate.toFixed(1)}%
+                </Text>
+              </View>
+              <View className="mb-4 flex-row justify-between">
+                <Text className="text-text-secondary font-heading text-sm">Oldest Entry:</Text>
+                <Text className="font-heading text-sm font-semibold">
+                  {vibeCheckCacheStats.oldestEntry
+                    ? new Date(vibeCheckCacheStats.oldestEntry).toLocaleDateString()
+                    : 'N/A'}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Text className="text-text-secondary font-heading text-sm">Loading cache stats...</Text>
+          )}
+          <Button
+            label="Clear Vibe Check Cache"
+            variant="secondary"
+            onPress={handleClearVibeCheckCache}
+            className="mt-2"
+          />
+        </View>
+      </View>
+
+      {/* Clear All Caches Section */}
+      <View className="mb-6 px-6">
+        <Text className="text-text-primary mb-4 font-heading text-lg font-bold">
+          Cache Management
+        </Text>
+        <Button
+          label="Clear All Caches"
+          variant="secondary"
+          onPress={handleClearAllCaches}
+          className="border-red-200 bg-red-50 text-red-700"
+        />
       </View>
 
       <View className="px-6">
