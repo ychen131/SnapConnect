@@ -1316,12 +1316,14 @@ export default function CameraScreen() {
           <VibeCheckSticker
             summary={shortSummary || 'Vibe Check failed'}
             onLearnWhy={() => setShowReport(true)}
-            initialPosition={{ x: 100, y: 200 }}
+            initialPosition={{ x: 0, y: 0 }}
             isLoading={status === 'loading'}
             error={errorInfo?.message || error || undefined}
             onRetry={errorInfo?.canRetry ? handleVibeCheckPress : undefined}
             photoUri={photoUri}
             isSuccess={!!shortSummary && status === 'succeeded' && !error}
+            mode={isEditMode ? 'edit' : 'preview'}
+            bottomOffset={120} // Adjust as needed to sit above bottom controls
           />
         )}
 
