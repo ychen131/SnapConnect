@@ -36,12 +36,7 @@ const VibeCheckHistoryItem = React.memo(function VibeCheckHistoryItem({
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
       {/* Photo Thumbnail */}
       <View style={styles.photoContainer}>
-        <CachedImage
-          uri={photoUri}
-          style={styles.photo}
-          fallbackSource={require('../../../assets/icon.png')}
-          showLoadingIndicator={false}
-        />
+        <CachedImage uri={photoUri} style={styles.photo} showLoadingIndicator={true} />
 
         {/* Magic Sticker Overlay */}
         <View style={styles.stickerOverlay}>
@@ -86,6 +81,7 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: '100%',
+    backgroundColor: 'transparent',
   },
   stickerOverlay: {
     position: 'absolute',

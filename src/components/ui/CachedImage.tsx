@@ -102,7 +102,11 @@ export default function CachedImage({
 
   // Show fallback or error state
   if (hasError || !cachedUri) {
-    return <Image style={{ backgroundColor: 'red' }} {...imageProps} />;
+    return (
+      <View style={[styles.fallbackContainer, style]}>
+        {/* Completely transparent fallback - no visual clutter */}
+      </View>
+    );
   }
 
   // Show cached image
@@ -124,6 +128,9 @@ const styles = StyleSheet.create({
   loadingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: 'transparent',
+  },
+  fallbackContainer: {
+    backgroundColor: 'transparent',
   },
 });
