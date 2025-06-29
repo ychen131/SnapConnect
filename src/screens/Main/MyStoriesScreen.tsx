@@ -25,6 +25,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { ProfileStackParamList } from '../../navigation/types';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { MainTabParamList } from '../../navigation/types';
 
 /**
  * Displays user's stories with management options
@@ -36,6 +38,7 @@ export default function MyStoriesScreen({ navigation }: { navigation: any }) {
   const [error, setError] = useState<string | null>(null);
   const user = useSelector((state: RootState) => state.auth.user);
   const storiesNavigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
 
   useEffect(() => {
     if (user?.id) {
@@ -157,6 +160,13 @@ export default function MyStoriesScreen({ navigation }: { navigation: any }) {
   ];
 
   /**
+   * Navigates to camera to add a new story
+   */
+  function handleAddStory() {
+    tabNavigation.navigate('Camera', { screen: 'CameraMain' });
+  }
+
+  /**
    * Renders a single story item
    */
   function renderStoryItem({ item }: { item: Story }) {
@@ -243,7 +253,11 @@ export default function MyStoriesScreen({ navigation }: { navigation: any }) {
             <Text className="font-heading text-lg text-brand">← Back</Text>
           </TouchableOpacity>
           <Text className="text-text-primary font-heading text-xl font-bold">My Stories</Text>
-          <View className="w-12" />
+          {stories.length > 0 && (
+            <TouchableOpacity onPress={handleAddStory}>
+              <Text className="font-heading text-lg text-brand">+ Add</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -259,9 +273,12 @@ export default function MyStoriesScreen({ navigation }: { navigation: any }) {
       ) : stories.length === 0 ? (
         <View className="flex-1 items-center justify-center px-4 py-4">
           <Text className="mb-2 font-heading text-xl text-muted">No Stories Yet</Text>
-          <Text className="text-center font-heading text-muted">
+          <Text className="mb-4 text-center font-heading text-muted">
             Create your first story by taking a photo or video and tapping "Add to Story"
           </Text>
+          <TouchableOpacity className="rounded-lg bg-brand px-6 py-3" onPress={handleAddStory}>
+            <Text className="font-heading font-semibold text-white">Add Your First Story</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList

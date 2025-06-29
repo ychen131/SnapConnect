@@ -166,8 +166,21 @@ export default function StoriesScreen() {
                 {...item}
                 onPress={() => {
                   if (item.isOwn) {
-                    // Switch to Camera tab and show CameraMain
-                    tabNavigation.navigate('Camera', { screen: 'CameraMain' });
+                    if (item.hasStory) {
+                      // User has stories - open StoryViewer for own stories
+                      const realId = user?.id || '';
+                      const userIndex = usersWithStories.findIndex((u) => u.id === realId);
+                      navigation.navigate('StoryViewer', {
+                        userId: realId,
+                        username: item.username,
+                        avatarUrl: item.avatarUrl,
+                        usersWithStories,
+                        userIndex,
+                      });
+                    } else {
+                      // User has no stories - navigate to Camera to add story
+                      tabNavigation.navigate('Camera', { screen: 'CameraMain' });
+                    }
                   } else if (item.hasStory) {
                     const realId = item.isOwn ? user?.id : item.id;
                     const userIndex = usersWithStories.findIndex((u) => u.id === realId);
