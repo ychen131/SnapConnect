@@ -3,13 +3,14 @@
  * @description Full-screen viewer for photo snaps with countdown timer and auto-dismiss.
  */
 import React, { useEffect, useState } from 'react';
-import { View, Image, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { markMessagesAsViewed } from '../../services/chatService';
 import { sendTextReply } from '../../services/chatService';
 import { clearSnapNotification, clearMessageNotification } from '../../services/realtimeService';
 import { supabase } from '../../services/supabase';
 import ReplyInputModal from '../../components/ui/ReplyInputModal';
+import CachedImage from '../../components/ui/CachedImage';
 
 interface SnapPhotoViewerProps {
   navigation: any;
@@ -101,9 +102,13 @@ export default function SnapPhotoViewer({ navigation, route }: SnapPhotoViewerPr
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
       <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={handleClose}>
-        <Image
-          source={{ uri: photoUrl }}
+        <CachedImage
+          uri={photoUrl}
           style={{ flex: 1, resizeMode: 'contain', backgroundColor: 'black' }}
+          fallbackSource={require('../../../assets/icon.png')}
+          showLoadingIndicator={true}
+          loadingColor="#FFFFFF"
+          loadingSize="large"
         />
 
         {/* Timer Display */}

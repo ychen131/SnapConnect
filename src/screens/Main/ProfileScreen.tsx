@@ -34,6 +34,8 @@ import {
   migrateLocalVibeChecksToCloud,
   VibeCheckRecord,
 } from '../../services/vibeCheckService';
+import { useImagePreloader } from '../../hooks/useImagePreloader';
+import CachedImage from '../../components/ui/CachedImage';
 import tailwindConfig from '../../../tailwind.config';
 import { getUserProfile } from '../../services/userService';
 
@@ -67,6 +69,7 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
   const [cloudVibeChecks, setCloudVibeChecks] = useState<VibeCheckRecord[]>([]);
   const [isMigrating, setIsMigrating] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { preloadForScreen } = useImagePreloader();
 
   useEffect(() => {
     console.log('ProfileScreen useEffect start', { userId, isSelf, routeKey: route.key });
@@ -139,6 +142,15 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
       const vibes = await fetchVibeChecksFromCloud(profileUser.id);
       console.log('Fetched vibes:', vibes);
       setCloudVibeChecks(vibes);
+
+      // Preload vibe check images for better performance
+      const imageUrls = vibes
+        .map((vibe) => vibe.source_url)
+        .filter((url): url is string => url !== null && url !== undefined && url.trim() !== '');
+
+      if (imageUrls.length > 0) {
+        preloadForScreen('ProfileScreen', imageUrls);
+      }
     } catch (err) {
       console.error('Error fetching vibe checks:', err);
       setCloudVibeChecks([]);
@@ -334,10 +346,11 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
           <View className="flex-row items-center">
             <View className="w-24 flex-shrink-0 items-center justify-center">
               {(profileUser as any).avatar_url ? (
-                <Image
-                  source={{ uri: (profileUser as any).avatar_url }}
-                  className="h-24 w-24 rounded-full"
-                  resizeMode="cover"
+                <CachedImage
+                  uri={(profileUser as any).avatar_url}
+                  style={{ width: 96, height: 96, borderRadius: 48 }}
+                  fallbackSource={require('../../../assets/icon.png')}
+                  showLoadingIndicator={false}
                 />
               ) : (
                 <View className="h-24 w-24 items-center justify-center rounded-full bg-brand">

@@ -22,6 +22,7 @@ import {
   clearAllMessageNotifications,
 } from '../../services/realtimeService';
 import { clearAllMessageNotifications as clearAllMessageNotificationsSlice } from '../../store/realtimeSlice';
+import { useImagePreloader } from '../../hooks/useImagePreloader';
 import DebugInfo from '../../components/DebugInfo';
 import Avatar from '../../components/ui/Avatar';
 import tailwindConfig from '../../../tailwind.config';
@@ -36,6 +37,7 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
   const user = useSelector((state: RootState) => state.auth.user);
   const realtimeState = useSelector((state: RootState) => state.realtime);
   const dispatch = useDispatch();
+  const { preloadForScreen } = useImagePreloader();
 
   // Safely access tailwind config with fallbacks
   const brandLight = (tailwindConfig?.theme?.extend?.colors as any)?.brand?.light || '#FFF0E6';
@@ -55,6 +57,15 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
     try {
       const data = await getConversations(user.id);
       setConversations(data);
+
+      // Preload avatar images for better performance
+      const avatarUrls = data
+        .map((conv) => conv.other_user_avatar_url)
+        .filter((url): url is string => url !== null && url !== undefined && url.trim() !== '');
+
+      if (avatarUrls.length > 0) {
+        preloadForScreen('ChatScreen', avatarUrls);
+      }
     } catch (error) {
     } finally {
       setIsLoading(false);
@@ -120,6 +131,7 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
             size={48}
             backgroundColor="#FF8C69"
             textColor="#FFFFFF"
+            showLoadingIndicator={false}
           />
 
           {/* Unread Badge - combine database count with realtime notifications */}

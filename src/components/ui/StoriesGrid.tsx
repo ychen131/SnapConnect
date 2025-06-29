@@ -3,7 +3,8 @@
  * @description 3-column grid component for displaying user stories on the profile page (no FlatList).
  */
 import React from 'react';
-import { View, Image, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
+import CachedImage from './CachedImage';
 
 export interface Story {
   id: string;
@@ -41,10 +42,11 @@ export function StoriesGrid({ stories, onStoryPress }: StoriesGridProps) {
                 onPress={onStoryPress ? () => onStoryPress(item) : undefined}
                 disabled={!onStoryPress}
               >
-                <Image
-                  source={{ uri: item.media_url }}
-                  className="h-full w-full rounded-md"
-                  resizeMode="cover"
+                <CachedImage
+                  uri={item.media_url}
+                  style={{ width: '100%', height: '100%', borderRadius: 6 }}
+                  fallbackSource={require('../../../assets/icon.png')}
+                  showLoadingIndicator={false}
                 />
               </TouchableOpacity>
             ) : (

@@ -2,7 +2,7 @@
  * @file SettingsScreen.tsx
  * @description Screen for editing user profile (avatar, username, bio) and logging out.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, TextInput, ScrollView, Alert } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../store';
@@ -12,10 +12,20 @@ import { uploadMediaToStorage } from '../../services/snapService';
 import { upsertUserProfile, getUserProfile } from '../../services/userService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { setUser, logout } from '../../store/authSlice';
+import { useImagePreloader } from '../../hooks/useImagePreloader';
+import CachedImage from '../../components/ui/CachedImage';
 
 export default function SettingsScreen({ navigation }: { navigation: any }) {
   const user = useSelector((state: RootState) => state.auth.user);
   const dispatch = useDispatch();
+  const { getCacheStats, clearCache } = useImagePreloader();
+  const [cacheStats, setCacheStats] = useState<{
+    totalEntries: number;
+    totalSizeMB: number;
+    oldestEntry: number;
+    newestEntry: number;
+  } | null>(null);
+
   if (!user) {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50">
@@ -30,6 +40,20 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
   );
   const [isSaving, setIsSaving] = useState(false);
   const [email, setEmail] = useState((user as any).email || '');
+
+  // Load cache stats on mount
+  useEffect(() => {
+    loadCacheStats();
+  }, []);
+
+  async function loadCacheStats() {
+    try {
+      const stats = await getCacheStats();
+      setCacheStats(stats);
+    } catch (error) {
+      console.error('Failed to load cache stats:', error);
+    }
+  }
 
   // Header with back button
   function handleBack() {
@@ -76,6 +100,30 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
     }
   }
 
+  // Clear image cache
+  async function handleClearCache() {
+    Alert.alert(
+      'Clear Image Cache',
+      'This will remove all cached images from your device. Images will be re-downloaded when needed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear Cache',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearCache();
+              await loadCacheStats();
+              Alert.alert('Success', 'Image cache cleared successfully.');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to clear image cache.');
+            }
+          },
+        },
+      ],
+    );
+  }
+
   // Placeholder for logout
   function handleLogout() {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -107,7 +155,12 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
       <View className="mb-8 mt-8 items-center">
         <TouchableOpacity onPress={handleAvatarUpload} className="mb-4">
           {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} className="h-24 w-24 rounded-full" />
+            <CachedImage
+              uri={avatarUrl}
+              style={{ width: 96, height: 96, borderRadius: 48 }}
+              fallbackSource={require('../../../assets/icon.png')}
+              showLoadingIndicator={false}
+            />
           ) : (
             <View className="h-24 w-24 items-center justify-center rounded-full bg-brand-light">
               <Text className="font-heading text-4xl font-bold text-brand">
@@ -149,6 +202,46 @@ export default function SettingsScreen({ navigation }: { navigation: any }) {
           autoCapitalize="none"
         />
       </View>
+
+      {/* Image Cache Management Section */}
+      <View className="mb-6 px-6">
+        <Text className="text-text-primary mb-4 font-heading text-lg font-bold">Image Cache</Text>
+        <View className="rounded-lg border border-gray-200 bg-white p-4">
+          {cacheStats ? (
+            <View>
+              <View className="mb-3 flex-row justify-between">
+                <Text className="text-text-secondary font-heading text-sm">Cached Images:</Text>
+                <Text className="font-heading text-sm font-semibold">
+                  {cacheStats.totalEntries}
+                </Text>
+              </View>
+              <View className="mb-3 flex-row justify-between">
+                <Text className="text-text-secondary font-heading text-sm">Cache Size:</Text>
+                <Text className="font-heading text-sm font-semibold">
+                  {cacheStats.totalSizeMB.toFixed(1)} MB
+                </Text>
+              </View>
+              <View className="mb-4 flex-row justify-between">
+                <Text className="text-text-secondary font-heading text-sm">Oldest Entry:</Text>
+                <Text className="font-heading text-sm font-semibold">
+                  {cacheStats.oldestEntry
+                    ? new Date(cacheStats.oldestEntry).toLocaleDateString()
+                    : 'N/A'}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Text className="text-text-secondary font-heading text-sm">Loading cache stats...</Text>
+          )}
+          <Button
+            label="Clear Image Cache"
+            variant="secondary"
+            onPress={handleClearCache}
+            className="mt-2"
+          />
+        </View>
+      </View>
+
       <View className="px-6">
         <Button
           label={isSaving ? 'Saving...' : 'Save Changes'}

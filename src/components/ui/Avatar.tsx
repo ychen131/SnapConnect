@@ -3,7 +3,8 @@
  * @description Reusable avatar component that displays user images or fallback initials
  */
 import React from 'react';
-import { View, Text, Image, ImageStyle } from 'react-native';
+import { View, Text, ImageStyle } from 'react-native';
+import CachedImage from './CachedImage';
 
 /**
  * Props for the Avatar component
@@ -27,6 +28,8 @@ interface AvatarProps {
   imageStyle?: ImageStyle;
   /** Additional styles for the container */
   containerStyle?: any;
+  /** Show loading indicator while caching avatar */
+  showLoadingIndicator?: boolean;
 }
 
 /**
@@ -42,6 +45,7 @@ export default function Avatar({
   textColor = '#FFFFFF',
   imageStyle,
   containerStyle,
+  showLoadingIndicator = false,
 }: AvatarProps) {
   const getInitials = () => {
     if (!username || username.length === 0) return 'U';
@@ -76,10 +80,14 @@ export default function Avatar({
   return (
     <View style={containerStyles}>
       {avatarUrl ? (
-        <Image
-          source={{ uri: avatarUrl }}
+        <CachedImage
+          uri={avatarUrl}
           style={imageStyles}
-          defaultSource={require('../../../assets/icon.png')} // Fallback to app icon
+          fallbackSource={require('../../../assets/icon.png')}
+          showLoadingIndicator={showLoadingIndicator}
+          loadingSize="small"
+          loadingColor={backgroundColor}
+          loadingContainerStyle={imageStyles}
         />
       ) : (
         <Text style={textStyles}>{getInitials()}</Text>

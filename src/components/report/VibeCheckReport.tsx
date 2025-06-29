@@ -22,6 +22,7 @@ import {
 import Markdown from 'react-native-markdown-display';
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
+import CachedImage from '../ui/CachedImage';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -176,7 +177,14 @@ export default function VibeCheckReport({
           {/* Photo at top (optional, tappable) */}
           {photoUri && (
             <TouchableOpacity onPress={() => setPhotoModalVisible(true)} activeOpacity={0.8}>
-              <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+              <CachedImage
+                uri={photoUri}
+                style={styles.photo}
+                fallbackSource={require('../../../assets/icon.png')}
+                showLoadingIndicator={true}
+                loadingColor="#FFD700"
+                loadingSize="small"
+              />
             </TouchableOpacity>
           )}
 
@@ -266,14 +274,18 @@ export default function VibeCheckReport({
           onRequestClose={() => setPhotoModalVisible(false)}
         >
           <View style={styles.fullscreenOverlay}>
-            <Image
-              source={{ uri: photoUri }}
+            <CachedImage
+              uri={photoUri}
               style={{
                 width: screen.width,
                 height: screen.height,
                 resizeMode: 'contain',
                 backgroundColor: 'black',
               }}
+              fallbackSource={require('../../../assets/icon.png')}
+              showLoadingIndicator={true}
+              loadingColor="#FFD700"
+              loadingSize="large"
             />
             <TouchableOpacity
               style={styles.fullscreenCloseButton}
