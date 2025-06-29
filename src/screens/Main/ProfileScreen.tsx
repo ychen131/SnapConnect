@@ -46,8 +46,13 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
   const loggedInUser = useSelector((state: RootState) => state.auth.user);
   const userId = route?.params?.userId || loggedInUser?.id;
   const isSelf = !route?.params?.userId || route?.params?.userId === loggedInUser?.id;
-  console.log('ProfileScreen render', { userId, isSelf, routeParams: route?.params });
-  const [profileUser, setProfileUser] = useState<any>(isSelf ? loggedInUser : null);
+  console.log('ProfileScreen render', {
+    userId,
+    isSelf,
+    routeParams: route?.params,
+    routeKey: route.key,
+  });
+  const [profileUser, setProfileUser] = useState<any>(null);
   const dispatch = useDispatch();
   const [friendCount, setFriendCount] = useState(0);
   const [snapCount, setSnapCount] = useState(0);
@@ -61,17 +66,8 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
   const [isMigrating, setIsMigrating] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Prevent property access on null profileUser
-  if (!profileUser) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-lg text-gray-600">Loading profile...</Text>
-      </View>
-    );
-  }
-
   useEffect(() => {
-    console.log('ProfileScreen useEffect start', { userId, isSelf });
+    console.log('ProfileScreen useEffect start', { userId, isSelf, routeKey: route.key });
     try {
       if (!isSelf && userId) {
         console.log('Fetching profile for userId:', userId);
@@ -86,7 +82,7 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
     } catch (err) {
       console.log('Error in ProfileScreen useEffect:', err);
     }
-  }, [userId, isSelf, loggedInUser]);
+  }, [route.key, userId, isSelf, loggedInUser]);
 
   // Load user stats when component mounts
   useEffect(() => {
@@ -133,7 +129,9 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
     if (!profileUser?.id) return;
     setIsLoading(true);
     try {
+      console.log('Fetching vibe checks for user:', profileUser.id);
       const vibes = await fetchVibeChecksFromCloud(profileUser.id);
+      console.log('Fetched vibes:', vibes);
       setCloudVibeChecks(vibes);
     } catch (err) {
       setCloudVibeChecks([]);
@@ -213,9 +211,17 @@ export default function ProfileScreen({ navigation, route }: { navigation: any; 
   function toTitleCase(str: string) {
     return str.replace(/\b\w/g, (char) => char.toUpperCase());
   }
-  const displayUsername = (profileUser as any).username
-    ? toTitleCase((profileUser as any).username)
-    : '';
+
+  if (!profileUser) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <Text className="text-lg text-gray-600">Loading profile...</Text>
+      </View>
+    );
+  }
+
+  // Only after profileUser is guaranteed to be non-null
+  const displayUsername = profileUser.username ? toTitleCase(profileUser.username) : '';
 
   /**
    * Handles tapping a Vibe Check history item
