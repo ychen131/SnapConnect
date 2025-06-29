@@ -11,6 +11,9 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
+  Image as RNImage,
+  Dimensions,
 } from 'react-native';
 import { CameraView, CameraType } from 'expo-camera';
 import { useCameraPermission } from '../../services/permissionService';
@@ -47,6 +50,9 @@ import VibeCheckReport from '../../components/report/VibeCheckReport';
 import { checkNetworkConnectivity, isNetworkError } from '../../utils/networkUtils';
 import { VibeCheckHistoryItem } from '../../components/ui/VibeCheckHistoryGrid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type CameraScreenNavigationProp = NativeStackNavigationProp<CameraStackParamList, 'CameraMain'>;
 
@@ -139,6 +145,13 @@ export default function CameraScreen() {
   // Saved Vibe Checks state
   const [savedVibeChecks, setSavedVibeChecks] = useState<VibeCheckHistoryItem[]>([]);
 
+  const { height: windowHeight, width: windowWidth } = Dimensions.get('window');
+  const insets = useSafeAreaInsets();
+  // Estimate top and bottom controls height (adjust as needed)
+  const controlsHeight = 0; // e.g., 120 top + 140 bottom
+  const previewHeight = windowHeight; // - controlsHeight - insets.top - insets.bottom;
+  const maxPreviewHeight = windowHeight;
+
   // Initialize history when a photo is taken
   useEffect(() => {
     if (photoUri) {
@@ -202,6 +215,17 @@ export default function CameraScreen() {
       setSavedVibeChecks(data ? JSON.parse(data) : []);
     });
   }, []);
+
+  async function handlePhotoLibraryUpload() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 1,
+    });
+    if (!result.canceled && result.assets && result.assets[0]?.uri) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  }
 
   if (!permission) {
     return (
@@ -940,28 +964,42 @@ export default function CameraScreen() {
   // Enhanced Photo Preview Screen
   if (photoUri) {
     return (
-      <View className="flex-1 bg-black">
-        {/* Photo Preview */}
-        <View className="flex-1">
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'bg-primary' }}>
+        <View
+          style={{
+            flex: 1,
+            // alignItems: 'center',
+            // justifyContent: 'center',
+            backgroundColor: 'black',
+          }}
+        >
           {photoUri && (
-            <FilteredImage imageUri={photoUri} filter={currentFilter} ref={filteredImageRef} />
+            <RNImage
+              source={{ uri: photoUri }}
+              style={{
+                width: windowWidth,
+                height: maxPreviewHeight,
+                resizeMode: 'cover',
+                backgroundColor: 'black',
+              }}
+            />
           )}
+        </View>
 
-          {/* Text Overlays */}
-          <View pointerEvents={isEditMode ? 'auto' : 'none'} style={{ flex: 1 }}>
-            {textOverlays.map((overlay) => (
-              <TextOverlay
-                key={overlay.id}
-                overlay={overlay}
-                onPositionChange={handleTextPositionChange}
-                onPress={handleTextOverlayPress}
-                isSelected={selectedTextId === overlay.id}
-                onSelect={handleTextSelect}
-                onDelete={handleTextDelete}
-                isEditMode={isEditMode}
-              />
-            ))}
-          </View>
+        {/* Text Overlays */}
+        <View pointerEvents={isEditMode ? 'auto' : 'none'} style={{ flex: 1 }}>
+          {textOverlays.map((overlay) => (
+            <TextOverlay
+              key={overlay.id}
+              overlay={overlay}
+              onPositionChange={handleTextPositionChange}
+              onPress={handleTextOverlayPress}
+              isSelected={selectedTextId === overlay.id}
+              onSelect={handleTextSelect}
+              onDelete={handleTextDelete}
+              isEditMode={isEditMode}
+            />
+          ))}
         </View>
 
         {/* Top Controls */}
@@ -1189,7 +1227,7 @@ export default function CameraScreen() {
             }
           />
         )}
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -1317,20 +1355,18 @@ export default function CameraScreen() {
         zoom={facing === 'back' ? 0.05 : 0}
       />
       {/* Overlay UI */}
-      {/* Flip Camera Button */}
-      <View className="absolute bottom-28 left-0 right-0 items-center">
+      {/* Camera Controls Row */}
+      <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center space-x-12">
+        {/* Photo Library Icon Button */}
         <TouchableOpacity
-          className="rounded-full bg-white/80 px-6 py-3"
-          onPress={toggleCameraFacing}
-          accessibilityLabel="Flip Camera"
+          className="mr-6 items-center justify-center"
+          onPress={handlePhotoLibraryUpload}
+          accessibilityLabel="Open Photo Library"
         >
-          <Text className="text-lg font-bold text-black">Flip Camera</Text>
+          <MaterialCommunityIcons name="image-multiple" size={40} color="#222" />
         </TouchableOpacity>
-      </View>
-      {/* Snapchat-style Capture Button */}
-      <View className="absolute bottom-8 left-0 right-0 items-center">
+        {/* Capture Button */}
         <View className="relative">
-          {/* Progress ring */}
           {isRecording && (
             <View
               className="absolute inset-0 rounded-full border-4 border-gray-300"
@@ -1342,7 +1378,6 @@ export default function CameraScreen() {
               }}
             />
           )}
-
           <TouchableOpacity
             className={`h-20 w-20 items-center justify-center rounded-full border-4 ${
               isRecording ? 'border-red-500 bg-red-100' : 'border-gray-300 bg-white'
@@ -1358,15 +1393,14 @@ export default function CameraScreen() {
             />
           </TouchableOpacity>
         </View>
-
-        {isRecording && (
-          <View className="mt-2 rounded bg-red-500 px-3 py-1">
-            <Text className="text-sm font-bold text-white">
-              Recording... {Math.round(recordingDuration / 1000)}s ({Math.round(recordingProgress)}
-              %)
-            </Text>
-          </View>
-        )}
+        {/* Flip Camera Icon Button */}
+        <TouchableOpacity
+          className="ml-6 items-center justify-center"
+          onPress={toggleCameraFacing}
+          accessibilityLabel="Flip Camera"
+        >
+          <MaterialCommunityIcons name="camera-flip" size={40} color="#222" />
+        </TouchableOpacity>
       </View>
     </View>
   );
