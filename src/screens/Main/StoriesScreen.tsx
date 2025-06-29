@@ -1,8 +1,8 @@
 /**
  * @file StoriesScreen.tsx
- * @description UI skeleton for the Stories feed: horizontal scroll of avatars (your story first), username labels, loading and empty states.
+ * @description UI for the Stories feed: Friends (avatars row) and Discovery (featured pups grid).
  */
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
@@ -17,6 +17,7 @@ import type { MainTabParamList } from '../../navigation/types';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import Avatar from '../../components/ui/Avatar';
 import { StackActions } from '@react-navigation/native';
+import FeaturedAccountsSection from '../../components/ui/FeaturedAccountsSection';
 
 function StoryAvatar({
   id,
@@ -29,26 +30,10 @@ function StoryAvatar({
   onPress,
   ...props
 }: any) {
-  if (!username) {
-    console.warn('StoryAvatar missing username:', {
-      username,
-      avatarUrl,
-      isOwn,
-      hasStory,
-      isNew,
-      hasVibeCheck,
-      ...props,
-    });
-  }
   const displayName = typeof username === 'string' && username.length > 0 ? username : 'U';
-
-  // Determine border color based on story status
-  let borderColor = '#E5E7EB'; // Default gray
-  if (isOwn && hasStory) {
-    borderColor = '#FF8C69'; // Brand color for own story
-  } else if (isNew) {
-    borderColor = '#FF8C69'; // Brand color for new stories
-  }
+  let borderColor = '#E5E7EB';
+  if (isOwn && hasStory) borderColor = '#FF8C69';
+  else if (isNew) borderColor = '#FF8C69';
 
   return (
     <TouchableOpacity className="mx-2 items-center" onPress={onPress}>
@@ -62,7 +47,6 @@ function StoryAvatar({
           backgroundColor={hasStory ? '#FF8C69' : '#E5E7EB'}
           textColor={hasStory ? '#FFFFFF' : '#6B7280'}
         />
-        {/* Vibe Check indicator */}
         {hasVibeCheck && (
           <View className="absolute -right-1 -top-1 rounded-full bg-yellow-400 p-1">
             <Text className="text-xs">✨</Text>
@@ -79,10 +63,9 @@ function StoryAvatar({
 export default function StoriesScreen() {
   const user = useSelector((state: RootState) => state.auth.user);
   const realtimeState = useSelector((state: RootState) => state.realtime);
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [stories, setStories] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [stories, setStories] = React.useState<any[]>([]);
+  const [error, setError] = React.useState<string | null>(null);
   const navigation = useNavigation<NativeStackNavigationProp<StoriesStackParamList>>();
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
 
@@ -93,33 +76,28 @@ export default function StoriesScreen() {
     try {
       const [friends, myStories] = await Promise.all([
         getFriendsWithActiveStories(user.id),
-        getUserStories(user.id, false), // Only active stories
+        getUserStories(user.id, false),
       ]);
-
-      // Check if user's stories have Vibe Check metadata
       const hasMyStory = Array.isArray(myStories) && myStories.length > 0;
       const hasVibeCheck = hasMyStory && myStories.some((story: any) => story.vibe_check_summary);
-
       const storyList = [
         {
           id: 'me',
           username: user.username,
-          avatarUrl: user.avatar_url || '', // Use user's own avatar
+          avatarUrl: user.avatar_url || '',
           isOwn: true,
           hasStory: hasMyStory,
           hasVibeCheck: hasVibeCheck,
         },
-        ...friends.map((f: any) => {
-          return {
-            id: f.user_id,
-            username: f.username,
-            avatarUrl: f.avatar_url || '',
-            isOwn: false,
-            hasStory: true,
-            isNew: true,
-            hasVibeCheck: false, // TODO: Check friends' stories for Vibe Check metadata
-          };
-        }),
+        ...friends.map((f: any) => ({
+          id: f.user_id,
+          username: f.username,
+          avatarUrl: f.avatar_url || '',
+          isOwn: false,
+          hasStory: true,
+          isNew: true,
+          hasVibeCheck: false,
+        })),
       ];
       setStories(storyList);
     } catch (err) {
@@ -130,68 +108,51 @@ export default function StoriesScreen() {
     }
   }
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchStories();
-  }, [user?.id, user?.avatar_url]); // Also update if avatar changes
+  }, [user?.id, user?.avatar_url]);
 
-  // Refresh stories when screen comes into focus (e.g., returning from story viewer)
   useFocusEffect(
     React.useCallback(() => {
-      // Clear story notifications when user intentionally views the stories list
       if (realtimeState.newStoryNotifications.length > 0) {
         clearAllStoryNotifications();
       }
-
-      // Refresh stories list
       if (user?.id) {
         fetchStories();
       }
     }, [user?.id]),
   );
 
-  // Refresh stories when there are new story notifications
-  useEffect(() => {
+  React.useEffect(() => {
     if (realtimeState.newStoryNotifications.length > 0 && user?.id) {
       fetchStories();
     }
   }, [realtimeState.newStoryNotifications.length, user?.id]);
 
-  // Build usersWithStories array for StoryViewer
   const usersWithStories = stories
     .map((s) => (s.isOwn ? { ...s, id: user?.id } : s))
     .filter((s) => s.hasStory || s.isOwn);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <View className="flex-row items-center border-b border-gray-200 bg-white px-4 py-3">
-        <Text className="text-text-primary font-heading text-2xl font-bold">Stories</Text>
-      </View>
-      <View className="py-6">
-        {isLoading ? (
-          <ActivityIndicator size="large" color="#FF8C69" />
-        ) : error ? (
-          <View className="items-center justify-center py-12">
-            <Text className="font-heading text-lg text-error">{error}</Text>
-          </View>
-        ) : stories.length === 0 ? (
-          <View className="items-center justify-center py-12">
-            <Text className="font-heading text-lg text-muted">No stories yet</Text>
-            <Text className="font-heading text-sm text-muted">
-              Your friends' stories will appear here
-            </Text>
-          </View>
-        ) : (
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#FFF0E6' }}>
+      <View className="flex-1" style={{ paddingBottom: 24 }}>
+        {/* Header */}
+        <View className="px-4 pb-2 pt-4">
+          <Text className="text-text-primary font-heading text-2xl font-extrabold">Stories</Text>
+        </View>
+        {/* Friends Section */}
+        <View className="px-4">
+          <Text className="text-text-primary font-bold">Friends</Text>
           <FlatList
             data={stories}
             horizontal
             keyExtractor={(item) => item.id}
-            renderItem={({ item, index }) => (
+            renderItem={({ item }) => (
               <StoryAvatar
                 {...item}
                 onPress={() => {
                   if (item.isOwn) {
                     if (item.hasStory) {
-                      // User has stories - open StoryViewer for own stories
                       const realId = user?.id || '';
                       const userIndex = usersWithStories.findIndex((u) => u.id === realId);
                       navigation.navigate('StoryViewer', {
@@ -202,7 +163,6 @@ export default function StoriesScreen() {
                         userIndex,
                       });
                     } else {
-                      // User has no stories - navigate to Camera to add story
                       tabNavigation.navigate('Camera', { screen: 'CameraMain' });
                     }
                   } else if (item.hasStory) {
@@ -220,9 +180,18 @@ export default function StoriesScreen() {
               />
             )}
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16 }}
+            contentContainerStyle={{ paddingVertical: 12 }}
           />
-        )}
+        </View>
+        {/* Discovery Section */}
+        <View className="mt-6 flex-1 px-4">
+          <Text className="text-text-primary font-bold">Discovery</Text>
+          <FeaturedAccountsSection
+            onCardPress={(userId) => {
+              // TODO: Implement navigation to featured account's story
+            }}
+          />
+        </View>
       </View>
     </SafeAreaView>
   );

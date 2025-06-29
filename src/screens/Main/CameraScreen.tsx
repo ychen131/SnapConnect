@@ -1021,7 +1021,6 @@ export default function CameraScreen() {
         ...result,
         source_url: uploadedImageUrl,
       });
-      setShowReport(true);
 
       setToastMessage(`Vibe Check Complete! ${result.short_summary}`);
       setToastType('success');

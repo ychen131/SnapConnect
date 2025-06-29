@@ -8,6 +8,7 @@ import counterReducer from './counterSlice';
 import authReducer from './authSlice';
 import realtimeReducer from './realtimeSlice';
 import vibeCheckReducer from './vibeCheckSlice';
+import featuredAccounts from './featuredAccountSlice';
 
 /**
  * The main Redux store for the app.
@@ -18,6 +19,7 @@ export const store = configureStore({
     auth: authReducer,
     realtime: realtimeReducer,
     vibeCheck: vibeCheckReducer,
+    featuredAccounts,
   },
   // devTools: process.env.NODE_ENV !== 'production', // Uncomment to customize
 });
