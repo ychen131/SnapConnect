@@ -23,7 +23,6 @@ import {
 } from '../../services/realtimeService';
 import { clearAllMessageNotifications as clearAllMessageNotificationsSlice } from '../../store/realtimeSlice';
 import { useImagePreloader } from '../../hooks/useImagePreloader';
-import DebugInfo from '../../components/DebugInfo';
 import Avatar from '../../components/ui/Avatar';
 import tailwindConfig from '../../../tailwind.config';
 
@@ -263,9 +262,6 @@ export default function ChatScreen({ navigation }: { navigation: any }) {
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
       />
-
-      {/* Debug Info Component */}
-      <DebugInfo />
     </SafeAreaView>
   );
 }
