@@ -45,7 +45,7 @@ export type ChatStackParamList = {
  * Params for the profile stack navigator.
  */
 export type ProfileStackParamList = {
-  ProfileMain: undefined;
+  ProfileMain: { userId?: string };
   AddFriends: undefined;
   MyStories: undefined;
   StoryViewer: {

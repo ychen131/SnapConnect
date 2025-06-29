@@ -188,7 +188,11 @@ export default function StoriesScreen() {
           <Text className="text-text-primary font-bold">Discovery</Text>
           <FeaturedAccountsSection
             onCardPress={(userId) => {
-              // TODO: Implement navigation to featured account's story
+              console.log('Discovery card pressed, navigating to ProfileMain with userId:', userId);
+              tabNavigation.navigate('Profile', {
+                screen: 'ProfileMain',
+                params: { userId },
+              });
             }}
           />
         </View>

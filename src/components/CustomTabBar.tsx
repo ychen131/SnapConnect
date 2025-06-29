@@ -8,6 +8,8 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../store';
 import { clearAllNotifications, clearAllStoryNotifications } from '../services/realtimeService';
 import { Badge } from './ui/Badge';
+import tailwindConfig from '../../tailwind.config';
+const brandColor = tailwindConfig.theme.extend.colors.brand.DEFAULT;
 
 /**
  * Props for the CustomTabBar component.
@@ -106,6 +108,15 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
               clearAllStoryNotifications();
             }
 
+            // Always reset to self when Profile tab is pressed
+            if (route.name === 'Profile') {
+              navigation.navigate('Profile', {
+                screen: 'ProfileMain',
+                params: {}, // No userId param = show self
+              });
+              return;
+            }
+
             navigation.navigate(route.name);
           }
         };
@@ -135,7 +146,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
             <View style={{ position: 'relative' }}>
               {/* Render the icon directly, as it is now a MaterialCommunityIcon */}
               {options.tabBarIcon?.({
-                color: isFocused ? '#FF8C69' : '#6B7280',
+                color: isFocused ? brandColor : '#6B7280',
                 size: 24,
                 focused: isFocused,
               })}
@@ -154,7 +165,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
             <Text
               style={{
                 fontSize: 12,
-                color: isFocused ? '#FF8C69' : '#6B7280',
+                color: isFocused ? brandColor : '#6B7280',
                 marginTop: 4,
                 fontWeight: isFocused ? '600' : '400',
               }}

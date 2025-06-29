@@ -34,12 +34,20 @@ import {
   migrateLocalVibeChecksToCloud,
   VibeCheckRecord,
 } from '../../services/vibeCheckService';
+import tailwindConfig from '../../../tailwind.config';
+import { getUserProfile } from '../../services/userService';
+const brandColor = tailwindConfig.theme.extend.colors.brand.DEFAULT;
+const brandLight = tailwindConfig.theme.extend.colors.brand.light;
 
 /**
  * Displays the user's profile with basic information and navigation options.
  */
-export default function ProfileScreen({ navigation }: { navigation: any }) {
-  const user = useSelector((state: RootState) => state.auth.user);
+export default function ProfileScreen({ navigation, route }: { navigation: any; route: any }) {
+  const loggedInUser = useSelector((state: RootState) => state.auth.user);
+  const userId = route?.params?.userId || loggedInUser?.id;
+  const isSelf = !route?.params?.userId || route?.params?.userId === loggedInUser?.id;
+  console.log('ProfileScreen render', { userId, isSelf, routeParams: route?.params });
+  const [profileUser, setProfileUser] = useState<any>(isSelf ? loggedInUser : null);
   const dispatch = useDispatch();
   const [friendCount, setFriendCount] = useState(0);
   const [snapCount, setSnapCount] = useState(0);
@@ -53,23 +61,50 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
   const [isMigrating, setIsMigrating] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Prevent property access on null profileUser
+  if (!profileUser) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <Text className="text-lg text-gray-600">Loading profile...</Text>
+      </View>
+    );
+  }
+
+  useEffect(() => {
+    console.log('ProfileScreen useEffect start', { userId, isSelf });
+    try {
+      if (!isSelf && userId) {
+        console.log('Fetching profile for userId:', userId);
+        getUserProfile(userId).then(({ data, error }) => {
+          console.log('Fetched profile:', data, error);
+          setProfileUser(data);
+        });
+      } else {
+        console.log('Setting profileUser to loggedInUser', loggedInUser);
+        setProfileUser(loggedInUser);
+      }
+    } catch (err) {
+      console.log('Error in ProfileScreen useEffect:', err);
+    }
+  }, [userId, isSelf, loggedInUser]);
+
   // Load user stats when component mounts
   useEffect(() => {
-    if (user?.id) {
+    if (profileUser?.id) {
       loadUserStats();
       fetchUserStories();
     }
-  }, [user?.id]);
+  }, [profileUser?.id]);
 
   // Fetch cloud vibe checks and migrate local on mount
   useEffect(() => {
-    if (!user?.id) return;
+    if (!profileUser?.id) return;
     let didCancel = false;
     async function migrateAndFetch() {
       setIsMigrating(true);
       try {
         // Migrate local vibes to cloud (only needed once after update)
-        await migrateLocalVibeChecksToCloud(user.id);
+        await migrateLocalVibeChecksToCloud(profileUser.id);
       } catch (err) {
         // Ignore migration errors
       }
@@ -82,23 +117,23 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
     return () => {
       didCancel = true;
     };
-  }, [user?.id]);
+  }, [profileUser?.id]);
 
   // Refresh on focus (e.g., after adding/deleting)
   useFocusEffect(
     useCallback(() => {
-      if (user?.id) refreshCloudVibes();
-    }, [user?.id]),
+      if (profileUser?.id) refreshCloudVibes();
+    }, [profileUser?.id]),
   );
 
   /**
    * Fetches all vibe checks from Supabase for the user.
    */
   async function refreshCloudVibes() {
-    if (!user?.id) return;
+    if (!profileUser?.id) return;
     setIsLoading(true);
     try {
-      const vibes = await fetchVibeChecksFromCloud(user.id);
+      const vibes = await fetchVibeChecksFromCloud(profileUser.id);
       setCloudVibeChecks(vibes);
     } catch (err) {
       setCloudVibeChecks([]);
@@ -111,12 +146,12 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
    * Loads user statistics (friends, snaps, stories)
    */
   async function loadUserStats() {
-    if (!user?.id) return;
+    if (!profileUser?.id) return;
     setIsLoading(true);
     try {
-      const friends = await getFriendsList(user.id);
+      const friends = await getFriendsList(profileUser.id);
       setFriendCount(friends.length);
-      const stories = await getUserStories(user.id, false);
+      const stories = await getUserStories(profileUser.id, false);
       setStoryCount(stories.length);
       setSnapCount(0);
     } catch (error) {
@@ -127,9 +162,9 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
   }
 
   async function fetchUserStories() {
-    if (!user?.id) return;
+    if (!profileUser?.id) return;
     try {
-      const stories = await getUserStories(user.id, false);
+      const stories = await getUserStories(profileUser.id, false);
       setUserStories(stories);
     } catch (error) {
       setUserStories([]);
@@ -178,7 +213,9 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
   function toTitleCase(str: string) {
     return str.replace(/\b\w/g, (char) => char.toUpperCase());
   }
-  const displayUsername = (user as any).username ? toTitleCase((user as any).username) : '';
+  const displayUsername = (profileUser as any).username
+    ? toTitleCase((profileUser as any).username)
+    : '';
 
   /**
    * Handles tapping a Vibe Check history item
@@ -192,7 +229,7 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
    * Handles deleting a vibe check from the cloud with confirmation.
    */
   async function handleDeleteVibeCheck(id: string) {
-    if (!user?.id) return;
+    if (!profileUser?.id) return;
     Alert.alert('Delete Vibe Check', 'Are you sure you want to delete this vibe check?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -205,7 +242,7 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
             setCloudVibeChecks((prev) => prev.filter((v) => v.id !== id));
             setShowVibeCheckReport(false);
             setSelectedVibeCheck(null);
-            await deleteVibeCheckFromCloud(id, user.id);
+            await deleteVibeCheckFromCloud(id, profileUser.id);
             // Optionally, refresh after a short delay to ensure backend is in sync
             setTimeout(refreshCloudVibes, 500);
           } catch (err) {
@@ -228,21 +265,21 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
 
   // Handler for pressing a story in the grid
   function handleStoryPress(story: Story) {
-    if (!user) return;
+    if (!profileUser) return;
     const usersWithStories = [
       {
-        id: user.id,
-        username: user.username,
-        avatarUrl: (user as any)?.avatarUrl || (user as any)?.avatar_url || '',
+        id: profileUser.id,
+        username: profileUser.username,
+        avatarUrl: (profileUser as any)?.avatarUrl || (profileUser as any)?.avatar_url || '',
         isOwn: true,
         hasStory: userStories.length > 0,
       },
     ];
     const storyIndex = userStories.findIndex((s) => s.id === story.id);
     navigation.navigate('StoryViewer', {
-      userId: user.id,
-      username: user.username,
-      avatarUrl: (user as any)?.avatarUrl || (user as any)?.avatar_url || '',
+      userId: profileUser.id,
+      username: profileUser.username,
+      avatarUrl: (profileUser as any)?.avatarUrl || (profileUser as any)?.avatar_url || '',
       usersWithStories,
       userIndex: 0,
       storyIndex,
@@ -275,14 +312,6 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
     }
   }
 
-  if (!user) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-lg text-gray-600">User not found</Text>
-      </View>
-    );
-  }
-
   // Render profile header
   const renderProfileHeader = () => {
     return (
@@ -291,16 +320,16 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
         <View className="px-4 pb-4 pt-4">
           <View className="flex-row items-center">
             <View className="w-24 flex-shrink-0 items-center justify-center">
-              {(user as any).avatar_url ? (
+              {(profileUser as any).avatar_url ? (
                 <Image
-                  source={{ uri: (user as any).avatar_url }}
+                  source={{ uri: (profileUser as any).avatar_url }}
                   className="h-24 w-24 rounded-full"
                   resizeMode="cover"
                 />
               ) : (
                 <View className="h-24 w-24 items-center justify-center rounded-full bg-brand">
                   <Text className="font-heading text-4xl font-bold text-white">
-                    {user.username?.charAt(0).toUpperCase() || 'U'}
+                    {profileUser.username?.charAt(0).toUpperCase() || 'U'}
                   </Text>
                 </View>
               )}
@@ -329,18 +358,20 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
           {/* Name, Handle, and Bio Section */}
           <View className="pt-4">
             <Text className="text-text-primary font-heading text-base font-bold">
-              {(user as any).displayName || displayUsername || 'User'}
+              {(profileUser as any).displayName || displayUsername || 'User'}
             </Text>
-            <Text className="text-text-secondary text-sm">@{user.username || 'username'}</Text>
+            <Text className="text-text-secondary text-sm">
+              @{profileUser.username || 'username'}
+            </Text>
             <Text className="text-text-primary mt-2 text-base">
-              {(user as any).bio ||
+              {(profileUser as any).bio ||
                 'Lover of squeaky toys & long walks on the beach. Professional napper. Send snacks.'}
             </Text>
           </View>
         </View>
 
         {/* Action Buttons Section */}
-        {user.id === (user as any).id ? (
+        {profileUser.id === (profileUser as any).id ? (
           <View className="flex-row items-center justify-center gap-2 px-4 pb-4">
             {/* Add Vibe Check CTA (fills half row) */}
             <TouchableOpacity
@@ -479,7 +510,17 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
   );
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#FFF0E6' }}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: brandLight }}>
+      {/* Header with Back button for friend profile */}
+      {!isSelf && (
+        <View className="flex-row items-center justify-between border-b border-gray-200 bg-transparent px-6 py-4">
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text className="font-heading text-lg font-semibold text-brand">Back</Text>
+          </TouchableOpacity>
+          <View />
+          <View style={{ width: 48 }} />
+        </View>
+      )}
       <FlatList
         data={flatListData}
         renderItem={renderItem}

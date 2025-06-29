@@ -32,6 +32,8 @@ import type {
   ProfileStackParamList,
 } from './types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import tailwindConfig from '../../tailwind.config';
+const brandColor = tailwindConfig.theme.extend.colors.brand.DEFAULT;
 
 /**
  * Camera stack navigator for camera-related screens
@@ -130,7 +132,7 @@ export default function MainNavigator() {
             <MaterialCommunityIcons
               name="camera-outline"
               size={size}
-              color={focused ? '#FF8C69' : '#6B7280'}
+              color={focused ? brandColor : '#6B7280'}
             />
           ),
         }}
@@ -144,7 +146,7 @@ export default function MainNavigator() {
             <MaterialCommunityIcons
               name="message-text-outline"
               size={size}
-              color={focused ? '#FF8C69' : '#6B7280'}
+              color={focused ? brandColor : '#6B7280'}
             />
           ),
         }}
@@ -158,7 +160,7 @@ export default function MainNavigator() {
             <MaterialCommunityIcons
               name="book-open-page-variant-outline"
               size={size}
-              color={focused ? '#FF8C69' : '#6B7280'}
+              color={focused ? brandColor : '#6B7280'}
             />
           ),
         }}
@@ -172,7 +174,7 @@ export default function MainNavigator() {
             <MaterialCommunityIcons
               name="account-circle-outline"
               size={size}
-              color={focused ? '#FF8C69' : '#6B7280'}
+              color={focused ? brandColor : '#6B7280'}
             />
           ),
         }}
