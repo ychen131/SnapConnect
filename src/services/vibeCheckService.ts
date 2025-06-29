@@ -1,6 +1,6 @@
 /**
  * @file vibeCheckService.ts
- * @description Service for calling the Supabase Edge Function for Vibe Check analysis.
+ * @description Service for calling the Supabase Edge Function for Vibe Check analysis and managing cloud-synced vibe checks.
  */
 
 import { supabase } from './supabase';
@@ -45,6 +45,81 @@ interface ConfidenceLevel {
   message: string;
   shouldProceed: boolean;
   showWarning: boolean;
+}
+
+// --- Helper to generate a UUID (RFC4122 v4) ---
+function generateUUID() {
+  // Simple UUID v4 generator
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0,
+      v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+// --- Types ---
+export interface VibeCheckRecord {
+  id?: string;
+  user_id: string;
+  session_id: string;
+  short_summary: string;
+  detailed_report: string;
+  source_url?: string;
+  confidence_score?: number;
+  analysis_data?: any;
+  request_timestamp: string;
+}
+
+// --- Cloud CRUD Functions ---
+
+/**
+ * Saves a new vibe check to Supabase (cloud).
+ * @param vibeCheck Vibe check record (without id)
+ * @returns The saved vibe check record (with id)
+ */
+export async function saveVibeCheckToCloud(
+  vibeCheck: Omit<VibeCheckRecord, 'id'>,
+): Promise<VibeCheckRecord> {
+  if (!vibeCheck.session_id) {
+    vibeCheck.session_id = generateUUID();
+  }
+  const { data, error } = await supabase
+    .from('vibe_check_feedback')
+    .insert([vibeCheck])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Fetches all vibe checks for the current user from Supabase.
+ * @param userId The user's id
+ * @returns Array of vibe check records
+ */
+export async function fetchVibeChecksFromCloud(userId: string): Promise<VibeCheckRecord[]> {
+  const { data, error } = await supabase
+    .from('vibe_check_feedback')
+    .select('*')
+    .eq('user_id', userId)
+    .order('request_timestamp', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Deletes a vibe check from Supabase by id.
+ * @param id The vibe check id
+ * @param userId The user's id (for RLS)
+ * @returns void
+ */
+export async function deleteVibeCheckFromCloud(id: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('vibe_check_feedback')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) throw error;
 }
 
 /**
@@ -384,5 +459,41 @@ export function getConfidenceUserMessage(confidenceLevel: ConfidenceLevel): stri
       return 'The image is too unclear to analyze. Please try a better photo with good lighting.';
     default:
       return '';
+  }
+}
+
+// --- Migration Logic ---
+
+/**
+ * Migrates all local AsyncStorage vibe checks to Supabase, then clears AsyncStorage.
+ * Call this ONCE on app update, then remove AsyncStorage logic from the app.
+ * @param userId The user's id
+ * @returns Number of migrated vibe checks
+ */
+export async function migrateLocalVibeChecksToCloud(userId: string): Promise<number> {
+  try {
+    // Dynamically import AsyncStorage for migration only
+    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+    const data = await AsyncStorage.getItem('savedVibeChecks');
+    const localVibes = data ? JSON.parse(data) : [];
+    if (!Array.isArray(localVibes) || localVibes.length === 0) return 0;
+    // Map and upload each vibe check
+    for (const vibe of localVibes) {
+      await saveVibeCheckToCloud({
+        user_id: userId,
+        session_id: vibe.session_id || vibe.id || generateUUID(),
+        short_summary: vibe.summary,
+        detailed_report: vibe.detailedReport,
+        source_url: vibe.photoUri || null,
+        confidence_score: vibe.confidence || null,
+        analysis_data: vibe.analysis || null,
+        request_timestamp: vibe.timestamp || new Date().toISOString(),
+      });
+    }
+    await AsyncStorage.removeItem('savedVibeChecks');
+    return localVibes.length;
+  } catch (err) {
+    console.error('Migration failed:', err);
+    return 0;
   }
 }
