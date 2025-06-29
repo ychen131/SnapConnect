@@ -4,7 +4,7 @@
  */
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { Canvas, Image as SkiaImage, useImage, ColorMatrix } from '@shopify/react-native-skia';
-import { useWindowDimensions } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 
 // Color matrix definitions for filters
 const FILTERS: Record<string, number[] | null> = {
@@ -35,7 +35,7 @@ interface FilteredImageProps {
  * Now supports forwarding a ref to the Canvas for snapshot/export
  */
 const FilteredImage = forwardRef<any, FilteredImageProps>(({ imageUri, filter }, ref) => {
-  const { width } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const image = useImage(imageUri);
   const canvasRef = useRef<any>(null);
 
@@ -49,24 +49,48 @@ const FilteredImage = forwardRef<any, FilteredImageProps>(({ imageUri, filter },
   }));
 
   if (!image) return null;
-
   // Maintain aspect ratio
   const aspectRatio = image.width() / image.height();
-  const displayWidth = width;
-  const displayHeight = width / aspectRatio;
+  console.log('image dimensions: ', image.width(), image.height());
+  let width = windowWidth;
+  let height = windowHeight;
+  let y = 0;
+  let x = 0;
+  if (aspectRatio >= 1) {
+    // landscape
+    console.log('landscape');
+    width = windowWidth;
+    height = windowWidth / aspectRatio;
+    y = windowHeight / 2 - height;
+    // height = windowHeight;
+    // width = windowHeight * aspectRatio;
+  } else {
+    // portrait
+    console.log('portrait');
+    width = windowHeight * aspectRatio;
+    height = windowHeight;
+    x = windowWidth / 2 - width / 2;
+  }
+
+  console.log('width', width);
+  console.log('height', height);
+  console.log('aspectRatio', aspectRatio);
+  console.log('windowWidth', windowWidth);
+  console.log('windowHeight', windowHeight);
 
   const matrix = FILTERS[filter] || undefined;
 
   return (
-    <Canvas ref={canvasRef} style={{ width: displayWidth, height: displayHeight }}>
-      <SkiaImage
-        image={image}
-        x={0}
-        y={0}
-        width={displayWidth}
-        height={displayHeight}
-        fit="contain"
-      >
+    <Canvas
+      ref={canvasRef}
+      style={{
+        width: windowWidth,
+        height: windowHeight,
+        alignContent: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <SkiaImage image={image} x={x} y={y} width={width} height={height} fit="cover">
         {matrix && <ColorMatrix matrix={matrix} />}
       </SkiaImage>
     </Canvas>

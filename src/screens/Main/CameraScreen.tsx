@@ -58,6 +58,7 @@ import {
   uploadImageToSupabaseStorage,
   saveVibeCheckToCloud,
 } from '../../services/vibeCheckService';
+import TimerSelector from '../../components/camera/TimerSelector';
 
 type CameraScreenNavigationProp = NativeStackNavigationProp<CameraStackParamList, 'CameraMain'>;
 
@@ -77,7 +78,7 @@ export default function CameraScreen() {
   const [pressStartTime, setPressStartTime] = useState<number | null>(null);
   const [recordingProgress, setRecordingProgress] = useState(0); // 0-100
   const [recordingDuration, setRecordingDuration] = useState(0); // in milliseconds
-  const [photoTimer, setPhotoTimer] = useState(3); // Default 3 seconds
+  const [photoTimer, setPhotoTimer] = useState(5); // Default 5 seconds
   const [isAddingToStory, setIsAddingToStory] = useState(false);
   const [hasNetworkError, setHasNetworkError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -164,6 +165,9 @@ export default function CameraScreen() {
   const controlsHeight = 0; // e.g., 120 top + 140 bottom
   const previewHeight = windowHeight; // - controlsHeight - insets.top - insets.bottom;
   const maxPreviewHeight = windowHeight;
+
+  // Add state for timer selector visibility
+  const [isTimerSelectorVisible, setIsTimerSelectorVisible] = useState(false);
 
   // Initialize history when a photo is taken
   useEffect(() => {
@@ -314,7 +318,7 @@ export default function CameraScreen() {
   function handleBackToCamera() {
     setPhotoUri(null);
     setVideoUri(null);
-    setPhotoTimer(3);
+    setPhotoTimer(5);
     setIsAddingToStory(false);
     setUploadProgress(0);
     setHasNetworkError(false);
@@ -1078,26 +1082,12 @@ export default function CameraScreen() {
   if (photoUri) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: 'bg-primary' }}>
-        <View
-          style={{
-            flex: 1,
-            // alignItems: 'center',
-            // justifyContent: 'center',
-            backgroundColor: 'black',
-          }}
-        >
-          {photoUri && (
-            <RNImage
-              source={{ uri: photoUri }}
-              style={{
-                width: windowWidth,
-                height: maxPreviewHeight,
-                resizeMode: 'cover',
-                backgroundColor: 'black',
-              }}
-            />
-          )}
-        </View>
+        {photoUri &&
+          (filteredImageUri ? (
+            <FilteredImage imageUri={filteredImageUri} filter={currentFilter} />
+          ) : (
+            <FilteredImage imageUri={photoUri} filter={currentFilter} />
+          ))}
 
         {/* Text Overlays */}
         <View pointerEvents={isEditMode ? 'auto' : 'none'} style={{ flex: 1 }}>
@@ -1118,7 +1108,7 @@ export default function CameraScreen() {
         {/* Top Controls */}
         <View className="absolute left-0 right-0 top-12 flex-row items-center justify-between px-4">
           <TouchableOpacity
-            className="rounded-full bg-black/50 p-3"
+            className="rounded-full bg-brand-light p-3"
             onPress={() => {
               // Reset all relevant state to return to camera view
               setPhotoUri(null);
@@ -1135,7 +1125,7 @@ export default function CameraScreen() {
             }}
             accessibilityLabel="Close"
           >
-            <Text className="text-lg font-bold text-white">✕</Text>
+            <Text className="font-heading text-lg text-accent">✕</Text>
           </TouchableOpacity>
 
           <View className="flex-row items-center space-x-2">
@@ -1143,39 +1133,32 @@ export default function CameraScreen() {
             <TouchableOpacity
               className={`flex-row items-center rounded-full px-4 py-2 ${
                 isOffline
-                  ? 'bg-gray-400'
+                  ? 'bg-muted'
                   : status === 'loading'
-                    ? 'bg-yellow-400'
+                    ? 'bg-brand-light'
                     : status === 'failed' && errorInfo?.canRetry
-                      ? 'bg-red-400'
-                      : 'bg-yellow-400'
+                      ? 'bg-error'
+                      : 'bg-brand'
               }`}
               onPress={handleVibeCheckPress}
               disabled={status === 'loading' || isOffline}
               accessibilityLabel="Vibe Check"
             >
-              {status === 'loading' ? (
-                <ActivityIndicator size="small" color="black" />
-              ) : isOffline ? (
-                <Text className="text-lg font-bold" style={{ marginRight: 4 }}>
-                  📡
-                </Text>
-              ) : status === 'failed' && errorInfo ? (
-                <Text className="text-lg font-bold" style={{ marginRight: 4 }}>
-                  {errorInfo.icon}
-                </Text>
-              ) : (
-                <Text className="text-lg font-bold" style={{ marginRight: 4 }}>
-                  🐾
-                </Text>
-              )}
               <Text
-                className={`font-bold ${
+                className="font-heading text-lg font-bold text-white"
+                style={{ marginRight: 4 }}
+              >
+                🐾
+              </Text>
+              <Text
+                className={`font-heading font-bold ${
                   isOffline
-                    ? 'text-gray-600'
+                    ? 'text-muted'
                     : status === 'failed' && errorInfo?.canRetry
                       ? 'text-white'
-                      : 'text-black'
+                      : status === 'loading'
+                        ? 'text-brand-dark'
+                        : 'text-white'
                 }`}
               >
                 {isOffline
@@ -1188,9 +1171,29 @@ export default function CameraScreen() {
               </Text>
             </TouchableOpacity>
 
+            {/* Timer Button (and modal) - only show when not in edit mode */}
+            {!isEditMode && (
+              <>
+                <TouchableOpacity
+                  className="rounded-full bg-brand-light px-4 py-2"
+                  onPress={() => setIsTimerSelectorVisible(true)}
+                >
+                  <Text className="font-heading text-brand-dark">
+                    {photoTimer === 0 ? 'No Timer' : `${photoTimer}s`}
+                  </Text>
+                </TouchableOpacity>
+                <TimerSelector
+                  visible={isTimerSelectorVisible}
+                  selectedValue={photoTimer}
+                  onSelect={setPhotoTimer}
+                  onClose={() => setIsTimerSelectorVisible(false)}
+                />
+              </>
+            )}
+
             {/* Edit Button */}
             <TouchableOpacity
-              className="rounded-full bg-black/50 px-4 py-2"
+              className="rounded-full bg-brand px-4 py-2"
               onPress={() =>
                 isEditMode
                   ? (setIsEditMode(false),
@@ -1201,29 +1204,10 @@ export default function CameraScreen() {
                   : enterEditMode()
               }
             >
-              <Text className="font-bold text-white">{isEditMode ? 'Done' : 'Edit'}</Text>
+              <Text className="font-heading font-bold text-white">
+                {isEditMode ? 'Done' : 'Edit'}
+              </Text>
             </TouchableOpacity>
-
-            {/* Timer Controls - only show when not in edit mode */}
-            {!isEditMode && (
-              <>
-                <TouchableOpacity
-                  className="rounded-full bg-black/50 px-4 py-2"
-                  onPress={() => setPhotoTimer(Math.max(1, photoTimer - 1))}
-                >
-                  <Text className="font-bold text-white">-</Text>
-                </TouchableOpacity>
-                <View className="rounded-full bg-black/50 px-4 py-2">
-                  <Text className="font-bold text-white">{photoTimer}s</Text>
-                </View>
-                <TouchableOpacity
-                  className="rounded-full bg-black/50 px-4 py-2"
-                  onPress={() => setPhotoTimer(Math.min(10, photoTimer + 1))}
-                >
-                  <Text className="font-bold text-white">+</Text>
-                </TouchableOpacity>
-              </>
-            )}
           </View>
         </View>
 
@@ -1248,27 +1232,24 @@ export default function CameraScreen() {
         )}
 
         {/* Bottom Controls */}
-        <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center space-x-4 px-4">
-          <TouchableOpacity className="rounded-full bg-gray-600 px-6 py-3" onPress={handleSave}>
-            <Text className="font-bold text-white">Save</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="rounded-full bg-purple-500 px-6 py-3"
-            onPress={handleAddToStory}
-            disabled={isAddingToStory}
-          >
-            {isAddingToStory ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Text className="font-bold text-white">Add to Story</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity className="rounded-full bg-yellow-500 px-6 py-3" onPress={handleSend}>
-            <Text className="font-bold text-black">Send</Text>
-          </TouchableOpacity>
-        </View>
+        {!isEditMode && (
+          <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center space-x-4 px-4">
+            <TouchableOpacity
+              className="rounded-full bg-brand px-6 py-3"
+              onPress={handleAddToStory}
+              disabled={isAddingToStory}
+            >
+              {isAddingToStory ? (
+                <ActivityIndicator size="small" color="#FFF0E6" />
+              ) : (
+                <Text className="font-heading text-white">Add to Story</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity className="rounded-full bg-accent px-6 py-3" onPress={handleSend}>
+              <Text className="font-heading text-white">Send</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Progress Indicator */}
         {isAddingToStory && (photoUri || videoUri) && <UploadProgressIndicator />}
@@ -1278,7 +1259,6 @@ export default function CameraScreen() {
           isVisible={isEditMode}
           onFilterPress={handleFilterPress}
           onTextPress={handleTextPress}
-          onVibeCheckPress={handleVibeCheckPress}
           onUndoPress={handleUndoPress}
           onRedoPress={handleRedoPress}
           onResetPress={handleResetPress}
@@ -1287,7 +1267,6 @@ export default function CameraScreen() {
           canRedo={canRedo}
           hasEdits={hasEdits}
           isSaving={isSaving}
-          isVibeChecking={status === 'loading'}
           selectedFilter={currentFilter}
           onFilterSelect={handleFilterSelect}
           imageUri={photoUri || undefined}
@@ -1416,27 +1395,25 @@ export default function CameraScreen() {
         )}
 
         {/* Bottom Controls */}
-        <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center space-x-4 px-4">
-          <TouchableOpacity className="rounded-full bg-gray-600 px-6 py-3" onPress={handleSave}>
-            <Text className="font-bold text-white">Save</Text>
-          </TouchableOpacity>
+        {!isEditMode && (
+          <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center space-x-4 px-4">
+            <TouchableOpacity
+              className="rounded-full bg-brand px-6 py-3"
+              onPress={handleAddToStory}
+              disabled={isAddingToStory}
+            >
+              {isAddingToStory ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text className="font-bold text-white">Add to Story</Text>
+              )}
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            className="rounded-full bg-purple-500 px-6 py-3"
-            onPress={handleAddToStory}
-            disabled={isAddingToStory}
-          >
-            {isAddingToStory ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Text className="font-bold text-white">Add to Story</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity className="rounded-full bg-yellow-500 px-6 py-3" onPress={handleSend}>
-            <Text className="font-bold text-black">Send</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity className="rounded-full bg-yellow-500 px-6 py-3" onPress={handleSend}>
+              <Text className="font-bold text-black">Send</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Progress Indicator */}
         {isAddingToStory && (photoUri || videoUri) && <UploadProgressIndicator />}
@@ -1446,7 +1423,6 @@ export default function CameraScreen() {
           isVisible={isEditMode}
           onFilterPress={handleFilterPress}
           onTextPress={handleTextPress}
-          onVibeCheckPress={handleVibeCheckPress}
           onUndoPress={handleUndoPress}
           onRedoPress={handleRedoPress}
           onResetPress={handleResetPress}
@@ -1455,7 +1431,6 @@ export default function CameraScreen() {
           canRedo={canRedo}
           hasEdits={hasEdits}
           isSaving={isSaving}
-          isVibeChecking={status === 'loading'}
           selectedFilter={currentFilter}
           onFilterSelect={handleFilterSelect}
           imageUri={photoUri || undefined}
