@@ -88,9 +88,9 @@ export type StoriesStackParamList = {
  * Params for the main app tab navigator.
  */
 export type MainTabParamList = {
+  Stories: NavigatorScreenParams<StoriesStackParamList>;
   Camera: NavigatorScreenParams<CameraStackParamList>;
   Chat: NavigatorScreenParams<ChatStackParamList>;
-  Stories: NavigatorScreenParams<StoriesStackParamList>;
   Profile: NavigatorScreenParams<ProfileStackParamList>;
 };
 

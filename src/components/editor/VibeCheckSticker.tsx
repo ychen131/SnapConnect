@@ -3,7 +3,7 @@
  * @description Draggable, resizable sticker for displaying the Vibe Check short summary on a photo. Includes a 'Learn Why' button when selected.
  */
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Share, Dimensions } from 'react-native';
 import {
   PanGestureHandler,
   PinchGestureHandler,
@@ -85,8 +85,24 @@ export default function VibeCheckSticker({
   const successPulse = useSharedValue(1);
 
   // Responsive width for preview mode
-  const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 360;
-  const stickerWidth = Math.min(windowWidth * 0.7, 320);
+  const windowWidth = Dimensions.get('window').width;
+  const windowHeight = Dimensions.get('window').height;
+  const stickerWidth = Math.min(windowWidth * 0.6, 240);
+  const stickerHeight = 60;
+  const margin = 16;
+
+  // Set initial position only on first mount
+  useEffect(() => {
+    if (mode === 'preview') {
+      // Center horizontally
+      translateX.value = (windowWidth - stickerWidth) / 2;
+      // Place just above the bottom buttons
+      translateY.value = windowHeight - bottomOffset - stickerHeight - margin;
+      scale.value = 1;
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Error shake animation
   useEffect(() => {
@@ -207,21 +223,12 @@ export default function VibeCheckSticker({
 
   // Animated styles
   const animatedStyle = useAnimatedStyle(() => {
-    if (mode === 'preview') {
-      return {
-        position: 'absolute',
-        left: (windowWidth - stickerWidth) / 2,
-        bottom: bottomOffset,
-        width: stickerWidth,
-        opacity: opacity.value,
-        zIndex: 1000,
-        transform: [
-          { scale: withSpring(entranceScale.value * hoverScale.value * successPulse.value) },
-        ],
-      };
-    }
-    // edit mode (draggable)
     return {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      width: stickerWidth,
+      height: stickerHeight,
       transform: [
         { translateX: withSpring(translateX.value + errorShake.value) },
         { translateY: withSpring(translateY.value) },
@@ -232,6 +239,7 @@ export default function VibeCheckSticker({
         },
       ],
       opacity: opacity.value,
+      zIndex: 1000,
     };
   });
 
@@ -254,98 +262,7 @@ export default function VibeCheckSticker({
     opacity: withTiming(selected ? 1 : 0, { duration: 200 }),
   }));
 
-  // Only wrap in gesture handlers in edit mode
-  if (mode === 'preview') {
-    return (
-      <Animated.View style={[styles.sticker, animatedStyle, glowStyle]}>
-        <View
-          style={[
-            styles.innerSticker,
-            error && styles.errorSticker,
-            { width: '100%', maxWidth: 320 },
-          ]}
-        >
-          {/* Sparkle burst effect on success */}
-          {showSparkle && (
-            <View style={styles.sparkleBurstContainer} pointerEvents="none">
-              {[...Array(8)].map((_, i) => (
-                <Animated.View
-                  key={i}
-                  style={[
-                    styles.sparkleBurst,
-                    {
-                      transform: [{ rotate: `${i * 45}deg` }, { translateY: -24 }],
-                    },
-                  ]}
-                >
-                  <Text style={styles.sparkleBurstText}>✨</Text>
-                </Animated.View>
-              ))}
-            </View>
-          )}
-          {/* Sparkle effect */}
-          <Animated.View style={[styles.sparkle, sparkleStyle]}>
-            <Text style={styles.sparkleText}>✨</Text>
-          </Animated.View>
-
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => setSelected(!selected)}
-            onPressIn={() => {
-              hoverScale.value = withSpring(1.05, { damping: 8, stiffness: 100 });
-            }}
-            onPressOut={() => {
-              hoverScale.value = withSpring(1, { damping: 8, stiffness: 100 });
-            }}
-          >
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <Animated.View style={[styles.loadingSpinner, loadingStyle]}>
-                  <Text style={styles.loadingText}>🐾</Text>
-                </Animated.View>
-                <Text style={styles.loadingMessage}>Checking vibe...</Text>
-              </View>
-            ) : error ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorIcon}>⚠️</Text>
-                <Text style={styles.errorText}>Vibe Check failed</Text>
-                <Text style={styles.errorMessage}>{error}</Text>
-              </View>
-            ) : (
-              <Text style={styles.summaryText}>{summary}</Text>
-            )}
-          </TouchableOpacity>
-
-          {!isLoading && !error && (
-            <Animated.View style={buttonStyle}>
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity style={styles.learnWhyButton} onPress={onLearnWhy}>
-                  <Text style={styles.learnWhyText}>Learn Why</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-                  <Text style={styles.shareButtonText}>📤</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.copyButton} onPress={handleCopy}>
-                  <Text style={styles.copyButtonText}>📋</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-          )}
-
-          {error && onRetry && (
-            <Animated.View style={buttonStyle}>
-              <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-                <Text style={styles.retryText}>🔄 Retry</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          )}
-        </View>
-      </Animated.View>
-    );
-  }
-
+  // Always wrap in gesture handlers for both preview and edit mode
   return (
     <PanGestureHandler
       onGestureEvent={panGesture}
@@ -391,7 +308,7 @@ export default function VibeCheckSticker({
               {isLoading ? (
                 <View style={styles.loadingContainer}>
                   <Animated.View style={[styles.loadingSpinner, loadingStyle]}>
-                    <Text style={styles.loadingText}>🐾</Text>
+                    <Text style={styles.loadingText}>🐕</Text>
                   </Animated.View>
                   <Text style={styles.loadingMessage}>Checking vibe...</Text>
                 </View>
@@ -510,7 +427,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   summaryText: {
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#222',
     textAlign: 'center',

@@ -124,6 +124,20 @@ export default function MainNavigator() {
       tabBar={(props) => <CustomTabBar {...props} />}
     >
       <Tab.Screen
+        name="Stories"
+        component={StoriesStackNavigator}
+        options={{
+          tabBarLabel: 'Stories',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons
+              name="book-open-page-variant-outline"
+              size={size}
+              color={focused ? brandColor : '#6B7280'}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
         name="Camera"
         component={CameraStackNavigator}
         options={{
@@ -145,20 +159,6 @@ export default function MainNavigator() {
           tabBarIcon: ({ color, size, focused }) => (
             <MaterialCommunityIcons
               name="message-text-outline"
-              size={size}
-              color={focused ? brandColor : '#6B7280'}
-            />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Stories"
-        component={StoriesStackNavigator}
-        options={{
-          tabBarLabel: 'Stories',
-          tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons
-              name="book-open-page-variant-outline"
               size={size}
               color={focused ? brandColor : '#6B7280'}
             />
