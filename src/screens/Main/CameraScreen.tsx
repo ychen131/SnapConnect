@@ -53,6 +53,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  uploadImageToSupabaseStorage,
+  saveVibeCheckToCloud,
+} from '../../services/vibeCheckService';
 
 type CameraScreenNavigationProp = NativeStackNavigationProp<CameraStackParamList, 'CameraMain'>;
 
@@ -144,6 +148,11 @@ export default function CameraScreen() {
 
   // Saved Vibe Checks state
   const [savedVibeChecks, setSavedVibeChecks] = useState<VibeCheckHistoryItem[]>([]);
+
+  // Add state for upload progress and pending vibe check
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [pendingVibeCheck, setPendingVibeCheck] = useState<any>(null); // Store the result to be saved
+  const [publicImageUrl, setPublicImageUrl] = useState<string | null>(null);
 
   const { height: windowHeight, width: windowWidth } = Dimensions.get('window');
   const insets = useSafeAreaInsets();
@@ -914,16 +923,33 @@ export default function CameraScreen() {
       setToastType('info');
       setToastVisible(true);
 
-      console.log('🔍 Starting Vibe Check with image optimization...');
+      // 1. Upload image to Supabase Storage
+      setIsUploadingImage(true);
+      let uploadedImageUrl = '';
+      try {
+        uploadedImageUrl = await uploadImageToSupabaseStorage(photoUri, user.id);
+        setPublicImageUrl(uploadedImageUrl);
+      } catch (uploadErr) {
+        setIsUploadingImage(false);
+        setToastMessage('Image upload failed. Please try again.');
+        setToastType('error');
+        setToastVisible(true);
+        return;
+      }
+      setIsUploadingImage(false);
 
-      // Use the new optimized function that handles compression automatically
+      // 2. Run Vibe Check analysis (using the uploaded image URL if needed)
       const result = await dispatch(
         performVibeCheckOptimized({ imageUri: photoUri, userId: user.id }),
       ).unwrap();
 
-      console.log('✅ Vibe Check completed:', result);
+      // 3. Store the result and image URL in local state for the report modal
+      setPendingVibeCheck({
+        ...result,
+        source_url: uploadedImageUrl,
+      });
+      setShowReport(true);
 
-      // Show success toast
       setToastMessage(`Vibe Check Complete! ${result.short_summary}`);
       setToastType('success');
       setToastVisible(true);
@@ -949,16 +975,31 @@ export default function CameraScreen() {
     }
   }
 
-  // Handler for Save to Profile button
+  // Handler for Save to Profile button in the report modal
   async function handleSaveToProfileFromCamera() {
-    if (!currentVibeCheck) return;
-    const alreadySaved = savedVibeChecks.some(
-      (v: VibeCheckHistoryItem) => v.id === currentVibeCheck.id,
-    );
-    if (alreadySaved) return;
-    const updated = [...savedVibeChecks, currentVibeCheck];
-    await AsyncStorage.setItem('savedVibeChecks', JSON.stringify(updated));
-    setSavedVibeChecks(updated);
+    if (!pendingVibeCheck || !user?.id || !publicImageUrl) return;
+    try {
+      await saveVibeCheckToCloud({
+        user_id: user.id,
+        session_id: Date.now().toString(),
+        short_summary: pendingVibeCheck.short_summary,
+        detailed_report: pendingVibeCheck.detailed_report,
+        source_url: publicImageUrl,
+        confidence_score: pendingVibeCheck.confidence,
+        analysis_data: pendingVibeCheck.analysis,
+        request_timestamp: new Date().toISOString(),
+      });
+      setToastMessage('Vibe check saved to profile!');
+      setToastType('success');
+      setToastVisible(true);
+      setShowReport(false);
+      setPendingVibeCheck(null);
+      setPublicImageUrl(null);
+    } catch (err) {
+      setToastMessage('Failed to save vibe check.');
+      setToastType('error');
+      setToastVisible(true);
+    }
   }
 
   // Enhanced Photo Preview Screen
@@ -1213,19 +1254,35 @@ export default function CameraScreen() {
         )}
 
         {/* Vibe Check Report Modal */}
-        {currentVibeCheck && (
+        {pendingVibeCheck && (
           <VibeCheckReport
             visible={showReport}
             onClose={() => setShowReport(false)}
-            report={currentVibeCheck.detailedReport}
-            photoUri={currentVibeCheck.photoUri}
-            isLoading={status === 'loading'}
-            onSaveToProfile={
-              !savedVibeChecks.some((v: VibeCheckHistoryItem) => v.id === currentVibeCheck.id)
-                ? handleSaveToProfileFromCamera
-                : undefined
-            }
+            report={pendingVibeCheck.detailed_report}
+            photoUri={publicImageUrl || undefined}
+            isLoading={false}
+            onSaveToProfile={handleSaveToProfileFromCamera}
           />
+        )}
+
+        {/* Uploading Image Indicator */}
+        {isUploadingImage && (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(0,0,0,0.4)',
+              zIndex: 100,
+            }}
+          >
+            <ActivityIndicator size="large" color="#FFD700" />
+            <Text style={{ color: '#FFD700', marginTop: 16 }}>Uploading image...</Text>
+          </View>
         )}
       </SafeAreaView>
     );

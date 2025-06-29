@@ -5,6 +5,7 @@
 
 import { supabase } from './supabase';
 import { optimizeImageForAPI, needsCompression, getImageInfo } from '../utils/imageCompression';
+import * as FileSystem from 'expo-file-system';
 
 // Request and response types
 export interface VibeCheckRequest {
@@ -495,5 +496,62 @@ export async function migrateLocalVibeChecksToCloud(userId: string): Promise<num
   } catch (err) {
     console.error('Migration failed:', err);
     return 0;
+  }
+}
+
+/**
+ * Uploads an image to Supabase Storage and returns the public URL.
+ * Handles both file:// and http(s):// URIs robustly for Expo/React Native.
+ * @param localUri Local file URI (from camera/gallery)
+ * @param userId User's ID (for folder organization)
+ * @returns Public URL of the uploaded image
+ */
+export async function uploadImageToSupabaseStorage(
+  localUri: string,
+  userId: string,
+): Promise<string> {
+  const fileExt = localUri.split('.').pop() || 'jpg';
+  const fileName = `${userId}/${Date.now()}.${fileExt}`;
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+  const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+  const uploadUrl = `${supabaseUrl}/storage/v1/object/vibe-check-images/${fileName}`;
+
+  try {
+    if (localUri.startsWith('file://')) {
+      // Use Expo FileSystem.uploadAsync for direct upload
+      const res = await FileSystem.uploadAsync(uploadUrl, localUri, {
+        httpMethod: 'POST',
+        headers: {
+          Authorization: `Bearer ${supabaseKey}`,
+          'x-upsert': 'true',
+          'Content-Type': 'image/jpeg', // or detect from fileExt
+        },
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+      });
+      if (res.status !== 200 && res.status !== 201) {
+        console.error('[Upload] Supabase direct upload failed:', res);
+        throw new Error('Supabase Storage upload failed');
+      }
+    } else {
+      // Fallback for http(s) URIs
+      const response = await fetch(localUri);
+      const blob = await response.blob();
+      const { data, error } = await supabase.storage
+        .from('vibe-check-images')
+        .upload(fileName, blob, { upsert: true });
+      if (error) {
+        console.error('[Upload] Supabase upload error:', error);
+        throw error;
+      }
+    }
+    // Get the public URL
+    const { data: publicUrlData } = supabase.storage
+      .from('vibe-check-images')
+      .getPublicUrl(fileName);
+    if (!publicUrlData?.publicUrl) throw new Error('Failed to get public URL for uploaded image');
+    return publicUrlData.publicUrl;
+  } catch (err) {
+    console.error('[Upload] Failed to upload image:', err);
+    throw err;
   }
 }

@@ -204,9 +204,13 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
         onPress: async () => {
           setIsDeleting(true);
           try {
-            await deleteVibeCheckFromCloud(id, user.id);
-            await refreshCloudVibes();
+            // Optimistically update UI
+            setCloudVibeChecks((prev) => prev.filter((v) => v.id !== id));
             setShowVibeCheckReport(false);
+            setSelectedVibeCheck(null);
+            await deleteVibeCheckFromCloud(id, user.id);
+            // Optionally, refresh after a short delay to ensure backend is in sync
+            setTimeout(refreshCloudVibes, 500);
           } catch (err) {
             // Optionally show error
           } finally {
