@@ -3,7 +3,13 @@
  * @description Skia-powered image component with real-time color matrix filters
  */
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
-import { Canvas, Image as SkiaImage, useImage, ColorMatrix } from '@shopify/react-native-skia';
+import {
+  Canvas,
+  Image as SkiaImage,
+  useImage,
+  ColorMatrix,
+  CubicSampling,
+} from '@shopify/react-native-skia';
 import { useWindowDimensions, View } from 'react-native';
 
 // Color matrix definitions for filters
@@ -51,14 +57,14 @@ const FilteredImage = forwardRef<any, FilteredImageProps>(({ imageUri, filter },
   if (!image) return null;
   // Maintain aspect ratio
   const aspectRatio = image.width() / image.height();
-  console.log('image dimensions: ', image.width(), image.height());
+  // console.log('image dimensions: ', image.width(), image.height());
   let width = windowWidth;
   let height = windowHeight;
   let y = 0;
   let x = 0;
   if (aspectRatio >= 1) {
     // landscape
-    console.log('landscape');
+    // console.log('landscape');
     width = windowWidth;
     height = windowWidth / aspectRatio;
     y = windowHeight / 2 - height;
@@ -66,17 +72,17 @@ const FilteredImage = forwardRef<any, FilteredImageProps>(({ imageUri, filter },
     // width = windowHeight * aspectRatio;
   } else {
     // portrait
-    console.log('portrait');
+    // console.log('portrait');
     width = windowHeight * aspectRatio;
     height = windowHeight;
     x = windowWidth / 2 - width / 2;
   }
 
-  console.log('width', width);
-  console.log('height', height);
-  console.log('aspectRatio', aspectRatio);
-  console.log('windowWidth', windowWidth);
-  console.log('windowHeight', windowHeight);
+  // console.log('width', width);
+  // console.log('height', height);
+  // console.log('aspectRatio', aspectRatio);
+  // console.log('windowWidth', windowWidth);
+  // console.log('windowHeight', windowHeight);
 
   const matrix = FILTERS[filter] || undefined;
 
@@ -90,7 +96,15 @@ const FilteredImage = forwardRef<any, FilteredImageProps>(({ imageUri, filter },
         justifyContent: 'center',
       }}
     >
-      <SkiaImage image={image} x={x} y={y} width={width} height={height} fit="cover">
+      <SkiaImage
+        image={image}
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        fit="cover"
+        sampling={CubicSampling}
+      >
         {matrix && <ColorMatrix matrix={matrix} />}
       </SkiaImage>
     </Canvas>

@@ -69,78 +69,7 @@ export async function applyFilter(imageUri: string, filterType: FilterType): Pro
       return imageUri;
     }
 
-    // For expo-image-manipulator, we'll use a simplified approach
-    // since it doesn't support color matrices directly
-    let actions: ImageManipulator.Action[] = [];
-
-    switch (filterType) {
-      case 'bw':
-        // Convert to grayscale
-        actions = [
-          { resize: { width: 100 } }, // Resize down
-          { resize: { width: 800 } }, // Resize back (creates grayscale effect)
-        ];
-        break;
-      case 'sepia':
-        actions = [
-          { resize: { width: 90 } }, // Slightly smaller for sepia effect
-          { resize: { width: 800 } }, // Resize back
-        ];
-        break;
-      case 'vibrant':
-        actions = [
-          { resize: { width: 110 } }, // Slightly larger for vibrant effect
-          { resize: { width: 800 } }, // Resize back
-        ];
-        break;
-      case 'cool':
-        actions = [
-          { resize: { width: 95 } }, // Slightly smaller for cool effect
-          { resize: { width: 800 } }, // Resize back
-        ];
-        break;
-      case 'warm':
-        actions = [
-          { resize: { width: 105 } }, // Slightly larger for warm effect
-          { resize: { width: 800 } }, // Resize back
-        ];
-        break;
-      case 'invert':
-        // For invert, we'll use a different approach
-        actions = [
-          { resize: { width: 50 } }, // Very small resize
-          { resize: { width: 800 } }, // Resize back (creates invert-like effect)
-        ];
-        break;
-      case 'contrast':
-        actions = [
-          { resize: { width: 85 } }, // Smaller for contrast effect
-          { resize: { width: 800 } }, // Resize back
-        ];
-        break;
-      case 'vintage':
-        actions = [
-          { resize: { width: 80 } }, // Smaller for vintage effect
-          { resize: { width: 800 } }, // Resize back
-        ];
-        break;
-      case 'night':
-        actions = [
-          { resize: { width: 70 } }, // Smaller for night effect
-          { resize: { width: 800 } }, // Resize back
-        ];
-        break;
-      default:
-        return imageUri;
-    }
-
-    const result = await ImageManipulator.manipulateAsync(imageUri, actions, {
-      compress: 0.8,
-      format: ImageManipulator.SaveFormat.JPEG,
-    });
-
-    console.log(`✅ Filter applied successfully: ${result.uri}`);
-    return result.uri;
+    return imageUri;
   } catch (error) {
     console.error(`❌ Failed to apply filter ${filterType}:`, error);
     return imageUri; // Return original on error
