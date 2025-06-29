@@ -393,6 +393,15 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
           <View className="flex-row justify-around">
             <TouchableOpacity
               className={`flex-1 items-center border-b-2 py-2 text-center ${selectedTab === 'vibes' ? 'border-yellow-400' : 'border-transparent'}`}
+              style={
+                selectedTab === 'vibes'
+                  ? {
+                      backgroundColor: 'rgba(255,255,255,0.4)',
+                      borderTopLeftRadius: 12,
+                      borderTopRightRadius: 12,
+                    }
+                  : undefined
+              }
               onPress={() => setSelectedTab('vibes')}
               activeOpacity={0.8}
             >
@@ -400,6 +409,15 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
             </TouchableOpacity>
             <TouchableOpacity
               className={`flex-1 items-center border-b-2 py-2 text-center ${selectedTab === 'stories' ? 'border-text-primary' : 'border-transparent'}`}
+              style={
+                selectedTab === 'stories'
+                  ? {
+                      backgroundColor: 'rgba(255,255,255,0.4)',
+                      borderTopLeftRadius: 12,
+                      borderTopRightRadius: 12,
+                    }
+                  : undefined
+              }
               onPress={() => setSelectedTab('stories')}
               activeOpacity={0.8}
             >
@@ -461,7 +479,7 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#FFF0E6' }}>
       <FlatList
         data={flatListData}
         renderItem={renderItem}

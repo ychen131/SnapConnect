@@ -31,6 +31,7 @@ import type {
   ChatStackParamList,
   ProfileStackParamList,
 } from './types';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 /**
  * Camera stack navigator for camera-related screens
@@ -125,7 +126,13 @@ export default function MainNavigator() {
         component={CameraStackNavigator}
         options={{
           tabBarLabel: 'Camera',
-          tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>📷</Text>,
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons
+              name="camera-outline"
+              size={size}
+              color={focused ? '#FF8C69' : '#6B7280'}
+            />
+          ),
         }}
       />
       <Tab.Screen
@@ -133,7 +140,13 @@ export default function MainNavigator() {
         component={ChatStackNavigator}
         options={{
           tabBarLabel: 'Chat',
-          tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>💬</Text>,
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons
+              name="message-text-outline"
+              size={size}
+              color={focused ? '#FF8C69' : '#6B7280'}
+            />
+          ),
         }}
       />
       <Tab.Screen
@@ -141,7 +154,13 @@ export default function MainNavigator() {
         component={StoriesStackNavigator}
         options={{
           tabBarLabel: 'Stories',
-          tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>📖</Text>,
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons
+              name="book-open-page-variant-outline"
+              size={size}
+              color={focused ? '#FF8C69' : '#6B7280'}
+            />
+          ),
         }}
       />
       <Tab.Screen
@@ -149,7 +168,13 @@ export default function MainNavigator() {
         component={ProfileStackNavigator}
         options={{
           tabBarLabel: 'Profile',
-          tabBarIcon: ({ color, size }) => <Text style={{ color, fontSize: size }}>👤</Text>,
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons
+              name="account-circle-outline"
+              size={size}
+              color={focused ? '#FF8C69' : '#6B7280'}
+            />
+          ),
         }}
       />
     </Tab.Navigator>

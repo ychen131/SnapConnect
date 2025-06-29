@@ -133,14 +133,12 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
             }}
           >
             <View style={{ position: 'relative' }}>
-              <Text
-                style={{
-                  fontSize: 24,
-                  color: isFocused ? '#3B82F6' : '#6B7280',
-                }}
-              >
-                {options.tabBarIcon?.({ color: isFocused ? '#3B82F6' : '#6B7280', size: 24 })}
-              </Text>
+              {/* Render the icon directly, as it is now a MaterialCommunityIcon */}
+              {options.tabBarIcon?.({
+                color: isFocused ? '#FF8C69' : '#6B7280',
+                size: 24,
+                focused: isFocused,
+              })}
 
               {/* Show red dot badge on Chat tab when there are unread messages */}
               {route.name === 'Chat' && (
@@ -156,7 +154,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
             <Text
               style={{
                 fontSize: 12,
-                color: isFocused ? '#3B82F6' : '#6B7280',
+                color: isFocused ? '#FF8C69' : '#6B7280',
                 marginTop: 4,
                 fontWeight: isFocused ? '600' : '400',
               }}
