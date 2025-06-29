@@ -38,6 +38,7 @@
     "expo-video": "^2.2.2",
     "langchain": "^0.3.29",
     "langsmith": "^0.3.34",
+    "lucide-react-native": "^0.525.0",
     "nativewind": "^4.1.23",
     "pinecone-client": "^2.0.0",
     "react": "19.0.0",
@@ -47,9 +48,10 @@
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "^5.4.0",
     "react-native-screens": "^4.11.1",
+    "react-native-svg": "^15.12.0",
+    "react-native-view-shot": "4.0.3",
     "react-redux": "^9.2.0",
-    "tailwindcss": "^3.4.17",
-    "react-native-view-shot": "4.0.3"
+    "tailwindcss": "^3.4.17"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
